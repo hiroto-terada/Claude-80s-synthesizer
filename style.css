@@ -355,7 +355,11 @@ header {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
+  row-gap: 8px;
 }
+
+/* 2行目を視覚的に区切る（5ステップ目以降） */
+.seq-step:nth-child(5) { border-top: 1px solid rgba(0,229,255,0.25); }
 
 .seq-step {
   background: var(--knob);

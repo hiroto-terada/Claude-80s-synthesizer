@@ -1,7 +1,7 @@
 /**
  * FM-80 Step Sequencer
- * 4 steps fixed, 1 step = 1 bar (4 beats in 4/4)
- * Full loop = 4 bars
+ * 8 steps fixed, 1 step = 1 bar (4 beats in 4/4)
+ * Full loop = 8 bars
  */
 
 const SEQ_NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -17,12 +17,16 @@ class Sequencer {
     this.currentStep = -1;
     this._timerId = null;
 
-    // Default 4-step pattern (C major chord tones over 4 bars)
+    // Default 8-step pattern
     this.steps = [
       { active: true,  midi: 60 },  // C4
       { active: true,  midi: 64 },  // E4
       { active: true,  midi: 67 },  // G4
       { active: false, midi: 69 },  // A4
+      { active: true,  midi: 67 },  // G4
+      { active: true,  midi: 64 },  // E4
+      { active: false, midi: 62 },  // D4
+      { active: true,  midi: 60 },  // C4
     ];
   }
 
@@ -47,7 +51,7 @@ class Sequencer {
   }
 
   _tick() {
-    this.currentStep = (this.currentStep + 1) % 4;
+    this.currentStep = (this.currentStep + 1) % 8;
     const step = this.steps[this.currentStep];
 
     if (typeof synth !== 'undefined' && synth) {
