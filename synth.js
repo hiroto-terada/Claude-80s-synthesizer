@@ -76,7 +76,6 @@ class FMSynth {
     );
 
     modulator.connect(modEnvGain);
-    modEnvGain.connect(/* will connect to carrier freq */ null); // placeholder
 
     // --- Carrier ---
     const carrier = this.ctx.createOscillator();
@@ -84,7 +83,6 @@ class FMSynth {
     carrier.frequency.value = freq;
 
     // Modulator -> carrier frequency (FM!)
-    modEnvGain.disconnect();
     modEnvGain.connect(carrier.frequency);
 
     // Carrier amplitude envelope
