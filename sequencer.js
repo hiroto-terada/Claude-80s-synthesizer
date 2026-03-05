@@ -1,7 +1,7 @@
 /**
  * FM-80 Step Sequencer
- * 8 steps fixed, 1 step = 1 bar (4 beats in 4/4)
- * Full loop = 8 bars
+ * 16 steps, 1 step = 1/16 note (TB-303 style)
+ * Full loop = 1 bar (4/4)
  */
 
 const SEQ_NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -17,22 +17,30 @@ class Sequencer {
     this.currentStep = -1;
     this._timerId = null;
 
-    // Default 8-step bass pattern (C3 range, TB-303 style)
+    // Default 16-step acid bass pattern (C3 range, TB-303 style)
     this.steps = [
-      { active: true,  midi: 48 },  // C3
-      { active: true,  midi: 48 },  // C3
-      { active: false, midi: 50 },  // D3
-      { active: true,  midi: 52 },  // E3
-      { active: true,  midi: 48 },  // C3
-      { active: false, midi: 55 },  // G3
+      { active: true,  midi: 48 },  // C3   beat 1
+      { active: false, midi: 48 },
+      { active: true,  midi: 48 },
+      { active: true,  midi: 51 },  // D#3
+      { active: true,  midi: 55 },  // G3   beat 2
+      { active: false, midi: 55 },
       { active: true,  midi: 53 },  // F3
-      { active: true,  midi: 50 },  // D3
+      { active: true,  midi: 52 },  // E3
+      { active: true,  midi: 48 },  // C3   beat 3
+      { active: true,  midi: 46 },  // A#2
+      { active: false, midi: 46 },
+      { active: true,  midi: 43 },  // G2
+      { active: true,  midi: 41 },  // F2   beat 4
+      { active: true,  midi: 43 },  // G2
+      { active: true,  midi: 45 },  // A2
+      { active: false, midi: 46 },  // A#2
     ];
   }
 
-  // 1 step = 1 bar = 4 beats
+  // 1 step = 1/16 note
   get stepMs() {
-    return (60 / this.bpm) * 4 * 1000;
+    return (60 / this.bpm) / 4 * 1000;
   }
 
   play() {
@@ -51,7 +59,7 @@ class Sequencer {
   }
 
   _tick() {
-    this.currentStep = (this.currentStep + 1) % 8;
+    this.currentStep = (this.currentStep + 1) % 16;
     const step = this.steps[this.currentStep];
 
     if (typeof bassSynth !== 'undefined' && bassSynth) {
@@ -99,7 +107,7 @@ function initSequencer() {
     container.appendChild(div);
   });
 
-  // Note up / down
+  // Note up / down / toggle
   container.addEventListener('click', e => {
     const btn = e.target;
     const stepIdx = parseInt(btn.dataset.step);
@@ -108,7 +116,7 @@ function initSequencer() {
     const step = sequencer.steps[stepIdx];
 
     if (btn.classList.contains('seq-note-up')) {
-      step.midi = Math.min(96, step.midi + 1);
+      step.midi = Math.min(72, step.midi + 1);
       document.getElementById(`seq-note-${stepIdx}`).textContent = seqMidiToName(step.midi);
     } else if (btn.classList.contains('seq-note-dn')) {
       step.midi = Math.max(24, step.midi - 1);
