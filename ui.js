@@ -41,7 +41,8 @@ function buildKeyboard() {
   const kb = document.getElementById('keyboard');
   kb.innerHTML = '';
 
-  const startOct = 2, numOct = 4;
+  // currentOctave を中心に 2オクターブ下から4オクターブ表示
+  const startOct = Math.max(0, currentOctave - 2), numOct = 4;
   let wCount = 0;
 
   // White keys
@@ -134,12 +135,18 @@ function initPCKeyboard() {
 // ── Octave & Pitch Bend ───────────────────────────────────
 function initKeyboardControls() {
   document.getElementById('octave-down').addEventListener('click', () => {
-    if (currentOctave > 1) currentOctave--;
-    document.getElementById('octave-display').textContent = 'OCT ' + currentOctave;
+    if (currentOctave > 2) {
+      currentOctave--;
+      document.getElementById('octave-display').textContent = 'OCT ' + currentOctave;
+      buildKeyboard();
+    }
   });
   document.getElementById('octave-up').addEventListener('click', () => {
-    if (currentOctave < 7) currentOctave++;
-    document.getElementById('octave-display').textContent = 'OCT ' + currentOctave;
+    if (currentOctave < 7) {
+      currentOctave++;
+      document.getElementById('octave-display').textContent = 'OCT ' + currentOctave;
+      buildKeyboard();
+    }
   });
 
   const pb = document.getElementById('pitchbend');
