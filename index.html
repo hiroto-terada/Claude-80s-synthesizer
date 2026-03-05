@@ -89,7 +89,22 @@
 
   </section>
 
-  <!-- ③ Keyboard -->
+  <!-- ③ Sequencer -->
+  <section id="sequencer-section">
+    <div class="seq-header">
+      <span class="seq-title">STEP SEQ</span>
+      <div class="seq-bpm-ctrl">
+        <button class="ctrl-btn" id="bpm-down">−</button>
+        <span id="bpm-display">120</span>
+        <button class="ctrl-btn" id="bpm-up">+</button>
+        <span class="seq-bpm-label">BPM</span>
+      </div>
+      <button id="seq-play-btn">▶ PLAY</button>
+    </div>
+    <div id="seq-steps"></div>
+  </section>
+
+  <!-- ④ Keyboard -->
   <section id="keyboard-section">
     <div id="keyboard-scroll"><div id="keyboard"></div></div>
     <div id="keyboard-footer">
@@ -115,6 +130,7 @@
 </div>
 
 <script src="synth.js"></script>
+<script src="sequencer.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

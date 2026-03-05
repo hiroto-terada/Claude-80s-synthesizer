@@ -31,6 +31,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   initPresets();
   initKeyboardControls();
   initPCKeyboard();
+  initSequencer();
 });
 
 // ── Piano Keyboard ────────────────────────────────────────
