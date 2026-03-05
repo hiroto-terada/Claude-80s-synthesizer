@@ -288,6 +288,138 @@ header {
   white-space: nowrap;
 }
 
+/* ── Sequencer ── */
+#sequencer-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px 12px;
+}
+
+.seq-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.seq-title {
+  font-size: 0.5rem;
+  letter-spacing: 3px;
+  color: var(--pink);
+  flex-shrink: 0;
+}
+
+.seq-bpm-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#bpm-display {
+  font-size: 0.75rem;
+  color: var(--accent);
+  min-width: 28px;
+  text-align: center;
+}
+
+.seq-bpm-label {
+  font-size: 0.5rem;
+  letter-spacing: 2px;
+  color: var(--dim);
+}
+
+#seq-play-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+#seq-play-btn:hover { background: rgba(0,229,255,0.1); }
+#seq-play-btn.playing {
+  border-color: var(--pink);
+  color: var(--pink);
+  background: rgba(255,77,166,0.08);
+  box-shadow: 0 0 8px rgba(255,77,166,0.3);
+}
+
+#seq-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.seq-step {
+  background: var(--knob);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  opacity: 0.45;
+  transition: border-color 0.1s, box-shadow 0.1s, opacity 0.1s;
+}
+.seq-step.seq-on { opacity: 1; }
+.seq-step.seq-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(0,229,255,0.35);
+}
+
+.seq-step-num {
+  font-size: 0.52rem;
+  color: var(--pink);
+  letter-spacing: 1px;
+}
+
+.seq-note-btn {
+  background: none;
+  border: none;
+  color: var(--dim);
+  font-size: 0.6rem;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 2px;
+  transition: color 0.1s;
+  font-family: var(--mono);
+}
+.seq-note-btn:hover { color: var(--accent); }
+
+.seq-note-name {
+  font-size: 0.78rem;
+  color: var(--accent);
+  letter-spacing: 1px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.seq-toggle {
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  padding: 3px 7px;
+  background: var(--knob);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.seq-toggle.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,229,255,0.1);
+}
+
 /* ── Start Overlay ── */
 #start-overlay {
   position: fixed; inset: 0;
