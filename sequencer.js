@@ -17,24 +17,24 @@ class Sequencer {
     this.currentStep = -1;
     this._timerId = null;
 
-    // Default 16-step acid bass pattern (C3 range, TB-303 style)
+    // Default: B1, every other step ON
     this.steps = [
-      { active: true,  midi: 48 },  // C3   beat 1
-      { active: false, midi: 48 },
-      { active: true,  midi: 48 },
-      { active: true,  midi: 51 },  // D#3
-      { active: true,  midi: 55 },  // G3   beat 2
-      { active: false, midi: 55 },
-      { active: true,  midi: 53 },  // F3
-      { active: true,  midi: 52 },  // E3
-      { active: true,  midi: 48 },  // C3   beat 3
-      { active: true,  midi: 46 },  // A#2
-      { active: false, midi: 46 },
-      { active: true,  midi: 43 },  // G2
-      { active: true,  midi: 41 },  // F2   beat 4
-      { active: true,  midi: 43 },  // G2
-      { active: true,  midi: 45 },  // A2
-      { active: false, midi: 46 },  // A#2
+      { active: true,  midi: 35 },  // B1
+      { active: false, midi: 35 },
+      { active: true,  midi: 35 },
+      { active: false, midi: 35 },
+      { active: true,  midi: 35 },
+      { active: false, midi: 35 },
+      { active: true,  midi: 35 },
+      { active: false, midi: 35 },
+      { active: true,  midi: 35 },
+      { active: false, midi: 35 },
+      { active: true,  midi: 35 },
+      { active: false, midi: 35 },
+      { active: true,  midi: 35 },
+      { active: false, midi: 35 },
+      { active: true,  midi: 35 },
+      { active: false, midi: 35 },
     ];
   }
 
