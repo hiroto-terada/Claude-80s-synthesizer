@@ -31,21 +31,7 @@
     </div>
   </header>
 
-  <!-- ② Keyboard -->
-  <section id="keyboard-section">
-    <div id="keyboard-scroll"><div id="keyboard"></div></div>
-    <div id="keyboard-footer">
-      <button class="ctrl-btn" id="octave-down">−</button>
-      <span id="octave-display">OCT 4</span>
-      <button class="ctrl-btn" id="octave-up">+</button>
-      <span id="note-display">---</span>
-      <span class="spacer"></span>
-      <label class="pitch-label">BEND</label>
-      <input type="range" id="pitchbend" min="-2" max="2" step="0.01" value="0">
-    </div>
-  </section>
-
-  <!-- ③ Parameters (all in one compact panel) -->
+  <!-- ② Parameters (all in one compact panel) -->
   <section id="params-panel">
 
     <div class="param-row">
@@ -100,6 +86,20 @@
       </div>
     </div>
 
+  </section>
+
+  <!-- ③ Keyboard -->
+  <section id="keyboard-section">
+    <div id="keyboard-scroll"><div id="keyboard"></div></div>
+    <div id="keyboard-footer">
+      <button class="ctrl-btn" id="octave-down">−</button>
+      <span id="octave-display">OCT 4</span>
+      <button class="ctrl-btn" id="octave-up">+</button>
+      <span id="note-display">---</span>
+      <span class="spacer"></span>
+      <label class="pitch-label">BEND</label>
+      <input type="range" id="pitchbend" min="-2" max="2" step="0.01" value="0">
+    </div>
   </section>
 
 </div><!-- #app -->
