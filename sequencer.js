@@ -17,16 +17,16 @@ class Sequencer {
     this.currentStep = -1;
     this._timerId = null;
 
-    // Default 8-step pattern
+    // Default 8-step bass pattern (C3 range, TB-303 style)
     this.steps = [
-      { active: true,  midi: 60 },  // C4
-      { active: true,  midi: 64 },  // E4
-      { active: true,  midi: 67 },  // G4
-      { active: false, midi: 69 },  // A4
-      { active: true,  midi: 67 },  // G4
-      { active: true,  midi: 64 },  // E4
-      { active: false, midi: 62 },  // D4
-      { active: true,  midi: 60 },  // C4
+      { active: true,  midi: 48 },  // C3
+      { active: true,  midi: 48 },  // C3
+      { active: false, midi: 50 },  // D3
+      { active: true,  midi: 52 },  // E3
+      { active: true,  midi: 48 },  // C3
+      { active: false, midi: 55 },  // G3
+      { active: true,  midi: 53 },  // F3
+      { active: true,  midi: 50 },  // D3
     ];
   }
 
@@ -45,7 +45,7 @@ class Sequencer {
   stop() {
     this.playing = false;
     clearTimeout(this._timerId);
-    if (typeof synth !== 'undefined' && synth) synth.allNotesOff();
+    if (typeof bassSynth !== 'undefined' && bassSynth) bassSynth.allNotesOff();
     this._highlightStep(-1);
     this.currentStep = -1;
   }
@@ -54,13 +54,13 @@ class Sequencer {
     this.currentStep = (this.currentStep + 1) % 8;
     const step = this.steps[this.currentStep];
 
-    if (typeof synth !== 'undefined' && synth) {
-      synth.allNotesOff();
+    if (typeof bassSynth !== 'undefined' && bassSynth) {
+      bassSynth.allNotesOff();
       if (step.active) {
-        synth.noteOn(step.midi, 0.8);
+        bassSynth.noteOn(step.midi);
         const noteOff = step.midi;
         setTimeout(() => {
-          if (typeof synth !== 'undefined' && synth) synth.noteOff(noteOff);
+          if (typeof bassSynth !== 'undefined' && bassSynth) bassSynth.noteOff(noteOff);
         }, this.stepMs * 0.8);
       }
     }
@@ -124,7 +124,7 @@ function initSequencer() {
   // Play / Stop
   const playBtn = document.getElementById('seq-play-btn');
   playBtn.addEventListener('click', () => {
-    if (!synth) return;
+    if (!bassSynth) return;
     if (sequencer.playing) {
       sequencer.stop();
       playBtn.textContent = '▶ PLAY';
