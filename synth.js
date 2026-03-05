@@ -120,6 +120,89 @@ class FMSynth {
   }
 }
 
+// ── TB-303-style Bass Synth ───────────────────────────────
+/**
+ * Mono bass synthesizer inspired by Roland TB-303.
+ * Sawtooth oscillator → resonant lowpass filter with envelope → amp envelope.
+ * Separate audio graph from FMSynth so it plays independently of the keyboard.
+ */
+class TB303Synth {
+  constructor(ctx) {
+    this.ctx = ctx;
+
+    // Master gain (independent from FMSynth master)
+    this.masterGain = ctx.createGain();
+    this.masterGain.gain.value = 0.55;
+    this.masterGain.connect(ctx.destination);
+
+    // Light reverb send
+    this.reverbSend = ctx.createGain();
+    this.reverbSend.gain.value = 0.06;
+    [0.04, 0.09, 0.16].forEach((t, i) => {
+      const d = ctx.createDelay(0.5);
+      d.delayTime.value = t;
+      const g = ctx.createGain();
+      g.gain.value = 0.35 - i * 0.08;
+      this.reverbSend.connect(d);
+      d.connect(g);
+      g.connect(this.masterGain);
+    });
+
+    this.voices = {};
+  }
+
+  noteOn(noteNumber) {
+    if (this.voices[noteNumber]) this.noteOff(noteNumber);
+
+    const freq = midiToFreq(noteNumber);
+    const now  = this.ctx.currentTime;
+
+    // Sawtooth oscillator (classic 303 timbre)
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+
+    // Resonant lowpass filter — the signature 303 "squelch"
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.Q.value = 16;
+    const baseCutoff = 280;
+    const envPeak    = baseCutoff + 2200;
+    filter.frequency.setValueAtTime(baseCutoff, now);
+    filter.frequency.linearRampToValueAtTime(envPeak, now + 0.004);
+    filter.frequency.exponentialRampToValueAtTime(baseCutoff, now + 0.32);
+
+    // Amplitude envelope: punchy attack, short decay, low sustain
+    const ampEnv = this.ctx.createGain();
+    ampEnv.gain.setValueAtTime(0.0001, now);
+    ampEnv.gain.linearRampToValueAtTime(0.6, now + 0.004);
+    ampEnv.gain.exponentialRampToValueAtTime(0.18, now + 0.12);
+
+    osc.connect(filter);
+    filter.connect(ampEnv);
+    ampEnv.connect(this.masterGain);
+    ampEnv.connect(this.reverbSend);
+    osc.start(now);
+
+    this.voices[noteNumber] = { osc, filter, ampEnv };
+  }
+
+  noteOff(noteNumber) {
+    const v = this.voices[noteNumber];
+    if (!v) return;
+    const now = this.ctx.currentTime;
+    v.ampEnv.gain.cancelScheduledValues(now);
+    v.ampEnv.gain.setValueAtTime(v.ampEnv.gain.value, now);
+    v.ampEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+    v.osc.stop(now + 0.06);
+    delete this.voices[noteNumber];
+  }
+
+  allNotesOff() {
+    Object.keys(this.voices).forEach(n => this.noteOff(parseInt(n)));
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────
 function midiToFreq(note) {
   return 440 * Math.pow(2, (note - 69) / 12);

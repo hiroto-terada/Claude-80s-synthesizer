@@ -2,8 +2,9 @@
  * FM-80 Synthesizer — UI Controller
  */
 
-let audioCtx = null;
-let synth    = null;
+let audioCtx  = null;
+let synth     = null;
+let bassSynth = null;  // TB-303 bass for step sequencer
 let currentOctave = 4;
 
 // PC keyboard → note mapping (relative to currentOctave)
@@ -21,7 +22,8 @@ document.getElementById('start-btn').addEventListener('click', () => {
   // iOS: resume context (may be suspended even after user gesture)
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
-  synth = new FMSynth(audioCtx);
+  synth     = new FMSynth(audioCtx);
+  bassSynth = new TB303Synth(audioCtx);
 
   document.getElementById('start-overlay').style.display = 'none';
   setLed('led-power', true);
