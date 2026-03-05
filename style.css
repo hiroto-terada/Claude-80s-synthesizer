@@ -112,12 +112,20 @@ header {
   padding: 10px 12px 8px;
 }
 
+/* scroll wrapper handles overflow; inner keyboard expands naturally */
+#keyboard-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 #keyboard {
   position: relative;
   height: 100px;
   display: flex;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-direction: row;
+  width: max-content;
+  min-width: 100%;
 }
 
 .key-white {

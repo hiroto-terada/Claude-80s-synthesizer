@@ -85,6 +85,8 @@ function buildKeyboard() {
 function addKeyHandlers(el, midi, label) {
   const on  = () => {
     if (!synth) return;
+    // iOS Safari: context may suspend between user gestures — always resume
+    if (audioCtx && audioCtx.state !== 'running') audioCtx.resume();
     el.classList.add('active');
     synth.noteOn(midi);
     document.getElementById('note-display').textContent = label;
@@ -107,6 +109,7 @@ function initPCKeyboard() {
     const k = e.key.toLowerCase();
     const map = PC_KEY_MAP[k];
     if (!map) return;
+    if (audioCtx && audioCtx.state !== 'running') audioCtx.resume();
     let note = map, oct = currentOctave;
     if (note.endsWith('+')) { note = note.slice(0, -1); oct++; }
     const midi = noteNameToMidi(note + oct);
