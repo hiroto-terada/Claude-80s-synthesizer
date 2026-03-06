@@ -207,16 +207,16 @@ header {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 3px;
-  padding: 10px 12px;
+  padding: 7px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .param-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -227,7 +227,7 @@ header {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
-  height: 44px;
+  height: 36px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -235,7 +235,7 @@ header {
 
 .param-divider {
   width: 1px;
-  height: 44px;
+  height: 36px;
   background: var(--border);
   flex-shrink: 0;
 }
@@ -245,11 +245,11 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .knob {
-  width: 42px; height: 42px;
+  width: 34px; height: 34px;
   border-radius: 50%;
   background: var(--knob);
   border: 2px solid var(--rim);
@@ -264,20 +264,20 @@ header {
 .knob.dragging { border-color: var(--accent); box-shadow: 0 0 9px rgba(0,229,255,0.4); }
 
 .knob-inner {
-  position: absolute; inset: 4px;
+  position: absolute; inset: 3px;
   border-radius: 50%;
   background: radial-gradient(circle at 38% 32%, #2a2a42, #101018);
 }
 
 .knob-dot {
   position: absolute;
-  width: 4px; height: 4px;
+  width: 3px; height: 3px;
   background: var(--dot);
   border-radius: 50%;
-  top: 5px; left: 50%;
+  top: 4px; left: 50%;
   transform: translateX(-50%);
   box-shadow: 0 0 4px var(--dot);
-  transform-origin: 50% 16px;
+  transform-origin: 50% 13px;
 }
 
 .knob-label {
