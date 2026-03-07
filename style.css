@@ -207,27 +207,33 @@ header {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 3px;
-  padding: 7px 10px;
+  padding: 5px 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
 }
 
 .param-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
+  padding: 5px 0;
+}
+
+/* セクション間の区切り線 */
+.param-row + .param-row {
+  border-top: 1px solid var(--border);
 }
 
 .param-group-label {
-  font-size: 0.5rem;
+  font-size: 0.45rem;
   letter-spacing: 2px;
   color: var(--pink);
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
-  height: 36px;
+  height: 30px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -235,7 +241,7 @@ header {
 
 .param-divider {
   width: 1px;
-  height: 36px;
+  height: 30px;
   background: var(--border);
   flex-shrink: 0;
 }
@@ -245,11 +251,11 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .knob {
-  width: 34px; height: 34px;
+  width: 28px; height: 28px;
   border-radius: 50%;
   background: var(--knob);
   border: 2px solid var(--rim);
@@ -274,14 +280,14 @@ header {
   width: 3px; height: 3px;
   background: var(--dot);
   border-radius: 50%;
-  top: 4px; left: 50%;
+  top: 3px; left: 50%;
   transform: translateX(-50%);
   box-shadow: 0 0 4px var(--dot);
-  transform-origin: 50% 13px;
+  transform-origin: 50% 11px;
 }
 
 .knob-label {
-  font-size: 0.5rem;
+  font-size: 0.42rem;
   letter-spacing: 1px;
   color: var(--dim);
   text-align: center;
