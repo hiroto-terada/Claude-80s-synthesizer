@@ -1,8 +1,10 @@
 /**
  * FM Synthesizer - 80s style (DX7-inspired)
  * 2-operator FM synthesis using Web Audio API
- * Signal chain: [carrier → carEnv] → filter → master → destination
- *                                   ↘ reverbSend → multiTapDelay → master
+ * Signal chain: [carrier → carEnv] → filter → distortion → masterGain → destination
+ *                                              ↘ delaySend → delayNode ↔ feedbackGain
+ *                                                            delayNode → masterGain
+ *                                              ↘ reverbSend → multiTapDelay → masterGain
  */
 
 class FMSynth {
@@ -14,17 +16,39 @@ class FMSynth {
     this.masterGain.gain.value = 0.6;
     this.masterGain.connect(ctx.destination);
 
-    // Filter (pre-master)
+    // Filter (pre-distortion)
     this.filter = ctx.createBiquadFilter();
     this.filter.type = 'lowpass';
     this.filter.frequency.value = 8000;
     this.filter.Q.value = 1.5;
-    this.filter.connect(this.masterGain);
+
+    // Distortion (WaveShaper)
+    this.distortion = ctx.createWaveShaper();
+    this.distortion.curve = this._makeDistortionCurve(0);
+    this.distortion.oversample = '4x';
+    this.filter.connect(this.distortion);
+    this.distortion.connect(this.masterGain);
+
+    // Delay with feedback
+    this.delayNode     = ctx.createDelay(2.0);
+    this.delayNode.delayTime.value = 0;
+    this.delayFeedback = ctx.createGain();
+    this.delayFeedback.gain.value = 0;
+    this.delaySend     = ctx.createGain();
+    this.delaySend.gain.value = 0;
+    this.delayWet      = ctx.createGain();
+    this.delayWet.gain.value = 0;
+    this.distortion.connect(this.delaySend);
+    this.delaySend.connect(this.delayNode);
+    this.delayNode.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delayNode);
+    this.delayNode.connect(this.delayWet);
+    this.delayWet.connect(this.masterGain);
 
     // Reverb: multi-tap delay (avoids ConvolverNode iOS issues)
     this.reverbSend = ctx.createGain();
     this.reverbSend.gain.value = 0.18;
-    this.filter.connect(this.reverbSend);
+    this.distortion.connect(this.reverbSend);
     [0.03, 0.07, 0.13, 0.19, 0.27].forEach((t, i) => {
       const d = ctx.createDelay(0.5);
       d.delayTime.value = t;
@@ -39,6 +63,18 @@ class FMSynth {
     this.patch = { ...PRESETS['E.PIANO'] };
   }
 
+  _makeDistortionCurve(amount) {
+    const n = 512;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = amount === 0
+        ? x
+        : ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+    }
+    return curve;
+  }
+
   setPatch(name) {
     if (PRESETS[name]) this.patch = { ...PRESETS[name] };
   }
@@ -47,6 +83,19 @@ class FMSynth {
   setMasterVolume(v) { this.masterGain.gain.value = v; }
   setReverbMix(v)    { this.reverbSend.gain.value = v * 0.35; }
   setFilterFreq(v)   { this.filter.frequency.value = v; }
+  setDistortion(v) {
+    // v: 0–1, maps to curve amount 0–400
+    this.distortion.curve = this._makeDistortionCurve(v * 400);
+  }
+  setDelayTime(v) {
+    this.delayNode.delayTime.value = v;
+    const active = v > 0.001 ? 0.45 : 0;
+    this.delaySend.gain.value = active;
+    this.delayWet.gain.value  = active;
+  }
+  setDelayFeedback(v) {
+    this.delayFeedback.gain.value = Math.min(0.92, v);
+  }
 
   noteOn(noteNumber, velocity = 0.8) {
     if (this.voices[noteNumber]) this.noteOff(noteNumber);
@@ -135,9 +184,32 @@ class TB303Synth {
     this.masterGain.gain.value = 0.55;
     this.masterGain.connect(ctx.destination);
 
+    // Distortion
+    this.distortion = ctx.createWaveShaper();
+    this.distortion.curve = this._makeDistortionCurve(0);
+    this.distortion.oversample = '4x';
+    this.distortion.connect(this.masterGain);
+
+    // Delay with feedback
+    this.delayNode     = ctx.createDelay(2.0);
+    this.delayNode.delayTime.value = 0;
+    this.delayFeedback = ctx.createGain();
+    this.delayFeedback.gain.value = 0;
+    this.delaySend     = ctx.createGain();
+    this.delaySend.gain.value = 0;
+    this.delayWet      = ctx.createGain();
+    this.delayWet.gain.value = 0;
+    this.distortion.connect(this.delaySend);
+    this.delaySend.connect(this.delayNode);
+    this.delayNode.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delayNode);
+    this.delayNode.connect(this.delayWet);
+    this.delayWet.connect(this.masterGain);
+
     // Light reverb send
     this.reverbSend = ctx.createGain();
     this.reverbSend.gain.value = 0.06;
+    this.distortion.connect(this.reverbSend);
     [0.04, 0.09, 0.16].forEach((t, i) => {
       const d = ctx.createDelay(0.5);
       d.delayTime.value = t;
@@ -149,6 +221,18 @@ class TB303Synth {
     });
 
     this.voices = {};
+  }
+
+  _makeDistortionCurve(amount) {
+    const n = 512;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = amount === 0
+        ? x
+        : ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+    }
+    return curve;
   }
 
   noteOn(noteNumber) {
@@ -180,8 +264,7 @@ class TB303Synth {
 
     osc.connect(filter);
     filter.connect(ampEnv);
-    ampEnv.connect(this.masterGain);
-    ampEnv.connect(this.reverbSend);
+    ampEnv.connect(this.distortion);
     osc.start(now);
 
     this.voices[noteNumber] = { osc, filter, ampEnv };
@@ -203,6 +286,18 @@ class TB303Synth {
   }
 
   setMasterVolume(v) { this.masterGain.gain.value = v; }
+  setDistortion(v) {
+    this.distortion.curve = this._makeDistortionCurve(v * 400);
+  }
+  setDelayTime(v) {
+    this.delayNode.delayTime.value = v;
+    const active = v > 0.001 ? 0.45 : 0;
+    this.delaySend.gain.value = active;
+    this.delayWet.gain.value  = active;
+  }
+  setDelayFeedback(v) {
+    this.delayFeedback.gain.value = Math.min(0.92, v);
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────
