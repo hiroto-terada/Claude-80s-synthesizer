@@ -18,6 +18,7 @@ class Sequencer {
     this._timerId = null;
     this.recording = false;
     this._recStepsLeft = 0;
+    this._metronomeOn = false;
     this.onRecordStop = null; // callback when recording finishes
 
     // Default: B1, every other step ON
@@ -95,6 +96,7 @@ class Sequencer {
     clearTimeout(this._countdownTimer);
     this.recording = false;
     this._recStepsLeft = 0;
+    this._metronomeOn = false;
     this.playing = false;
     clearTimeout(this._timerId);
     if (typeof bassSynth !== 'undefined' && bassSynth) bassSynth.allNotesOff();
@@ -105,6 +107,7 @@ class Sequencer {
   startRecord() {
     // Stop any current playback and restart fresh with countdown
     this.stop();
+    this._metronomeOn = true; // keep metronome on through countdown AND recording
     this._doCountdown(() => {
       this._recStepsLeft = 16;
       this.recording = true;
@@ -116,6 +119,11 @@ class Sequencer {
 
   _tick() {
     this.currentStep = (this.currentStep + 1) % 16;
+
+    // ── Click track: fires on every beat (independent of recording state) ──
+    if (this._metronomeOn && this.currentStep % 4 === 0) {
+      this._playClick(this.currentStep === 0);
+    }
 
     // ── Recording: capture last pressed note into this step ──
     if (this.recording) {
@@ -136,11 +144,6 @@ class Sequencer {
         this.recording = false;
         if (typeof this.onRecordStop === 'function') this.onRecordStop();
       }
-    }
-
-    // ── Click track during recording (every beat = 4 steps) ──
-    if (this.recording && this.currentStep % 4 === 0) {
-      this._playClick(this.currentStep === 0);
     }
 
     // ── Playback ──
