@@ -216,9 +216,9 @@ header {
 .param-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  flex-wrap: wrap;
-  padding: 5px 0;
+  gap: 4px;
+  flex-wrap: nowrap;
+  padding: 4px 0;
 }
 
 /* セクション間の区切り線 */
