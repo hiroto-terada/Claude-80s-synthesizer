@@ -269,3 +269,59 @@ function setLed(id, on) {
   const el = document.getElementById(id);
   if (el) el.dataset.on = on ? '1' : '0';
 }
+
+// ── Volume Drawer ──────────────────────────────────────────
+(function initVolumeDrawer() {
+  const drawer   = document.getElementById('vol-drawer');
+  const backdrop = document.getElementById('vol-backdrop');
+  const sliderSynth = document.getElementById('vol-synth');
+  const sliderSeq   = document.getElementById('vol-seq');
+
+  // ── Open / Close ──
+  function openDrawer() {
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+  }
+  backdrop.addEventListener('click', closeDrawer);
+
+  // ── Slider → Audio ──
+  sliderSynth.addEventListener('input', () => {
+    if (synth) synth.setMasterVolume(parseFloat(sliderSynth.value));
+  });
+  sliderSeq.addEventListener('input', () => {
+    if (bassSynth) bassSynth.setMasterVolume(parseFloat(sliderSeq.value));
+  });
+
+  // ── Swipe detection ──
+  // Open: swipe right starting from left edge (x < 30px)
+  // Close: swipe left inside open drawer
+  let tx0 = 0, ty0 = 0, tracking = false;
+  const EDGE_ZONE = 30;   // px from left edge to start open-swipe
+  const THRESHOLD = 60;   // px horizontal travel to trigger
+
+  document.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    tx0 = t.clientX;
+    ty0 = t.clientY;
+    tracking = tx0 < EDGE_ZONE || drawer.classList.contains('open');
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!tracking) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - tx0;
+    const dy = Math.abs(t.clientY - ty0);
+    if (dy > Math.abs(dx)) return; // 縦スクロールは無視
+
+    if (dx > THRESHOLD && !drawer.classList.contains('open')) {
+      openDrawer();
+    } else if (dx < -THRESHOLD && drawer.classList.contains('open')) {
+      closeDrawer();
+    }
+    tracking = false;
+  }, { passive: true });
+})();

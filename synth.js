@@ -201,6 +201,8 @@ class TB303Synth {
   allNotesOff() {
     Object.keys(this.voices).forEach(n => this.noteOff(parseInt(n)));
   }
+
+  setMasterVolume(v) { this.masterGain.gain.value = v; }
 }
 
 // ── Helpers ──────────────────────────────────────────────
