@@ -277,12 +277,9 @@ function applyKnobParam(param, val) {
     case 'filter':    synth.setFilterFreq(val);        break;
     case 'reverb':    synth.setReverbMix(val);         break;
     case 'volume':    synth.setMasterVolume(val);      break;
-    case 'dist':      synth.setDistortion(val);
-                      if (bassSynth) bassSynth.setDistortion(val);  break;
-    case 'delayTime': synth.setDelayTime(val);
-                      if (bassSynth) bassSynth.setDelayTime(val);   break;
-    case 'delayFb':   synth.setDelayFeedback(val);
-                      if (bassSynth) bassSynth.setDelayFeedback(val); break;
+    case 'dist':      synth.setDistortion(val);    break;
+    case 'delayTime': synth.setDelayTime(val);     break;
+    case 'delayFb':   synth.setDelayFeedback(val); break;
   }
 }
 
