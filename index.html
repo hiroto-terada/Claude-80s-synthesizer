@@ -35,53 +35,69 @@
   <section id="params-panel">
 
     <div class="param-row">
-      <div class="param-group-label">ENV</div>
-      <div class="knob-group">
-        <div class="knob" data-param="attack"  data-min="0.001" data-max="2"   data-default="0.005"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">ATK</div>
-      </div>
-      <div class="knob-group">
-        <div class="knob" data-param="decay"   data-min="0.01"  data-max="3"   data-default="0.5"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">DCY</div>
-      </div>
-      <div class="knob-group">
-        <div class="knob" data-param="sustain" data-min="0"     data-max="1"   data-default="0.1"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">SUS</div>
-      </div>
-      <div class="knob-group">
-        <div class="knob" data-param="release" data-min="0.01"  data-max="5"   data-default="0.8"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">REL</div>
-      </div>
-      <div class="param-divider"></div>
-      <div class="param-group-label">FM</div>
-      <div class="knob-group">
-        <div class="knob" data-param="modRatio" data-min="0.5" data-max="16"  data-default="0.5"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">RATIO</div>
-      </div>
-      <div class="knob-group">
-        <div class="knob" data-param="modIndex" data-min="0"   data-max="12"  data-default="5"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">INDEX</div>
-      </div>
-      <div class="knob-group">
-        <div class="knob" data-param="modDecay" data-min="0.01" data-max="3"  data-default="0.4"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">ENV.D</div>
-      </div>
-    </div>
 
-    <div class="param-row">
-      <div class="param-group-label">EFFECTS</div>
-      <div class="knob-group">
-        <div class="knob" data-param="filter"  data-min="200"  data-max="18000" data-default="8000"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">FILTER</div>
+      <div class="param-section">
+        <div class="param-section-label">ENV</div>
+        <div class="param-section-knobs">
+          <div class="knob-group">
+            <div class="knob" data-param="attack"  data-min="0.001" data-max="2"   data-default="0.005"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">ATK</div>
+          </div>
+          <div class="knob-group">
+            <div class="knob" data-param="decay"   data-min="0.01"  data-max="3"   data-default="0.5"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">DCY</div>
+          </div>
+          <div class="knob-group">
+            <div class="knob" data-param="sustain" data-min="0"     data-max="1"   data-default="0.1"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">SUS</div>
+          </div>
+          <div class="knob-group">
+            <div class="knob" data-param="release" data-min="0.01"  data-max="5"   data-default="0.8"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">REL</div>
+          </div>
+        </div>
       </div>
-      <div class="knob-group">
-        <div class="knob" data-param="reverb"  data-min="0"    data-max="1"     data-default="0.18"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">REVERB</div>
+
+      <div class="param-divider"></div>
+
+      <div class="param-section">
+        <div class="param-section-label">FM</div>
+        <div class="param-section-knobs">
+          <div class="knob-group">
+            <div class="knob" data-param="modRatio" data-min="0.5" data-max="16"  data-default="0.5"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">RATIO</div>
+          </div>
+          <div class="knob-group">
+            <div class="knob" data-param="modIndex" data-min="0"   data-max="12"  data-default="5"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">INDEX</div>
+          </div>
+          <div class="knob-group">
+            <div class="knob" data-param="modDecay" data-min="0.01" data-max="3"  data-default="0.4"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">ENV.D</div>
+          </div>
+        </div>
       </div>
-      <div class="knob-group">
-        <div class="knob" data-param="volume"  data-min="0"    data-max="1"     data-default="0.6"><div class="knob-inner"></div><div class="knob-dot"></div></div>
-        <div class="knob-label">VOL</div>
+
+      <div class="param-divider"></div>
+
+      <div class="param-section">
+        <div class="param-section-label">EFFECTS</div>
+        <div class="param-section-knobs">
+          <div class="knob-group">
+            <div class="knob" data-param="filter"  data-min="200"  data-max="18000" data-default="8000"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">FILTER</div>
+          </div>
+          <div class="knob-group">
+            <div class="knob" data-param="reverb"  data-min="0"    data-max="1"     data-default="0.18"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">REVERB</div>
+          </div>
+          <div class="knob-group">
+            <div class="knob" data-param="volume"  data-min="0"    data-max="1"     data-default="0.6"><div class="knob-inner"></div><div class="knob-dot"></div></div>
+            <div class="knob-label">VOL</div>
+          </div>
+        </div>
       </div>
+
     </div>
 
   </section>

@@ -215,33 +215,36 @@ header {
 
 .param-row {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  align-items: stretch;
+  gap: 6px;
   flex-wrap: nowrap;
   padding: 4px 0;
 }
 
-/* セクション間の区切り線 */
-.param-row + .param-row {
-  border-top: 1px solid var(--border);
+.param-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
 }
 
-.param-group-label {
-  font-size: 0.45rem;
+.param-section-label {
+  font-size: 0.42rem;
   letter-spacing: 2px;
   color: var(--pink);
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  transform: rotate(180deg);
-  height: 30px;
+  text-align: center;
+  width: 100%;
+}
+
+.param-section-knobs {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  gap: 4px;
 }
 
 .param-divider {
   width: 1px;
-  height: 30px;
+  align-self: stretch;
   background: var(--border);
   flex-shrink: 0;
 }
