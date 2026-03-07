@@ -46,6 +46,44 @@ class Sequencer {
     return (60 / this.bpm) / 4 * 1000;
   }
 
+  // 1 beat = 4 steps (1/4 note)
+  get beatMs() {
+    return this.stepMs * 4;
+  }
+
+  // Short click sound via Web Audio API
+  _playClick(accent = false) {
+    const ctx = (typeof audioCtx !== 'undefined') ? audioCtx : null;
+    if (!ctx || ctx.state !== 'running') return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.connect(env);
+    env.connect(ctx.destination);
+    osc.frequency.value = accent ? 1400 : 900;
+    env.gain.setValueAtTime(accent ? 0.4 : 0.22, now);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
+    osc.start(now);
+    osc.stop(now + 0.03);
+  }
+
+  // 4-beat countdown, then call cb
+  _doCountdown(cb) {
+    let beat = 4;
+    const fire = () => {
+      if (beat > 0) {
+        if (typeof this.onCountdown === 'function') this.onCountdown(beat);
+        this._playClick(beat === 4);
+        beat--;
+        this._countdownTimer = setTimeout(fire, this.beatMs);
+      } else {
+        if (typeof this.onCountdown === 'function') this.onCountdown(0);
+        cb();
+      }
+    };
+    fire();
+  }
+
   play() {
     if (this.playing) return;
     this.playing = true;
@@ -54,6 +92,7 @@ class Sequencer {
   }
 
   stop() {
+    clearTimeout(this._countdownTimer);
     this.recording = false;
     this._recStepsLeft = 0;
     this.playing = false;
@@ -64,13 +103,15 @@ class Sequencer {
   }
 
   startRecord() {
-    this._recStepsLeft = 16;
-    this.recording = true;
-    if (!this.playing) {
+    // Stop any current playback and restart fresh with countdown
+    this.stop();
+    this._doCountdown(() => {
+      this._recStepsLeft = 16;
+      this.recording = true;
       this.playing = true;
       this.currentStep = -1;
       this._tick();
-    }
+    });
   }
 
   _tick() {
@@ -95,6 +136,11 @@ class Sequencer {
         this.recording = false;
         if (typeof this.onRecordStop === 'function') this.onRecordStop();
       }
+    }
+
+    // ── Click track during recording (every beat = 4 steps) ──
+    if (this.recording && this.currentStep % 4 === 0) {
+      this._playClick(this.currentStep === 0);
     }
 
     // ── Playback ──
@@ -192,10 +238,13 @@ function initSequencer() {
 
   recBtn.addEventListener('click', () => {
     if (!bassSynth) return;
-    if (sequencer.recording) return; // already recording, ignore
+    if (sequencer.recording) return;
     recBtn.classList.add('recording');
-    recBtn.textContent = '⏹ REC';
     setPlayBtnState(true);
+
+    sequencer.onCountdown = (beat) => {
+      recBtn.textContent = beat > 0 ? `${beat}...` : '⏹ REC';
+    };
     sequencer.onRecordStop = () => {
       recBtn.classList.remove('recording');
       recBtn.textContent = '⏺ REC';
