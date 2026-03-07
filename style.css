@@ -42,24 +42,30 @@ body {
 header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 4px 10px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-bottom: 2px solid var(--accent);
   border-radius: 5px 5px 0 0;
-  flex-wrap: wrap;
+}
+
+.brand-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
 .brand {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  flex-shrink: 0;
+  gap: 4px;
 }
-.brand-logo { font-size: 1rem; color: var(--accent); }
+.brand-logo { font-size: 0.85rem; color: var(--accent); }
 .brand-name {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: bold;
   letter-spacing: 3px;
   color: #fff;
@@ -71,7 +77,7 @@ header {
 .preset-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
 }
 
@@ -80,9 +86,9 @@ header {
   border: 1px solid var(--border);
   color: var(--dim);
   font-family: var(--mono);
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   letter-spacing: 1px;
-  padding: 3px 9px;
+  padding: 2px 6px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.1s;
@@ -96,9 +102,9 @@ header {
   box-shadow: 0 0 5px rgba(0,229,255,0.25);
 }
 
-.led-bar { display: flex; gap: 6px; align-items: center; }
+.led-bar { display: flex; gap: 5px; align-items: center; }
 .led {
-  width: 8px; height: 8px; border-radius: 50%;
+  width: 7px; height: 7px; border-radius: 50%;
   background: #0a1a10;
   transition: all 0.1s;
 }
