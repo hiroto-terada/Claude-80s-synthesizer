@@ -7,6 +7,26 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- Swipe handle (always visible at left edge on mobile) -->
+<div id="vol-swipe-handle"></div>
+
+<!-- Volume Drawer -->
+<div id="vol-backdrop"></div>
+<div id="vol-drawer">
+  <div class="vol-drawer-title">VOLUME</div>
+  <div class="vol-slider-row">
+    <div class="vol-slider-wrap">
+      <input type="range" id="vol-synth" class="vol-slider" min="0" max="1" step="0.01" value="0.6">
+      <div class="vol-slider-label">SYNTH</div>
+    </div>
+    <div class="vol-slider-wrap">
+      <input type="range" id="vol-seq" class="vol-slider" min="0" max="1" step="0.01" value="0.55">
+      <div class="vol-slider-label">SEQ</div>
+    </div>
+  </div>
+  <div class="vol-drawer-hint">← スワイプで閉じる</div>
+</div>
+
 <div id="app">
 
   <!-- ① Header -->
