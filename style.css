@@ -339,6 +339,7 @@ header {
   color: var(--dim);
 }
 
+#seq-step-write-btn, #seq-rest-btn,
 #seq-rec-btn, #seq-play-btn {
   background: transparent;
   border: 1px solid var(--accent);
@@ -353,7 +354,25 @@ header {
 }
 #seq-play-btn { margin-left: auto; }
 #seq-rec-btn  { margin-left: auto; }
+#seq-step-write-btn:hover,
+#seq-rest-btn:hover,
 #seq-rec-btn:hover  { background: rgba(0,229,255,0.1); }
+
+/* Step Write モード: ボタンと選択ステップのハイライト */
+#seq-step-write-btn.active {
+  border-color: #ffcc00;
+  color: #ffcc00;
+  background: rgba(255,204,0,0.1);
+  box-shadow: 0 0 8px rgba(255,204,0,0.3);
+}
+#seq-rest-btn {
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+.seq-step.seq-write-current {
+  outline: 2px solid #ffcc00;
+  background: rgba(255,204,0,0.08);
+}
 #seq-play-btn:hover { background: rgba(0,229,255,0.1); }
 
 #seq-rec-btn.recording {

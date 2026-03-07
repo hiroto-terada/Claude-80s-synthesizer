@@ -7,6 +7,32 @@ let synth     = null;
 let bassSynth = null;  // TB-303 bass for step sequencer
 let currentOctave = 4;
 let recMidi   = null;  // last MIDI note pressed (for record mode)
+let stepWriteMode     = false;
+let selectedWriteStep = 0;
+
+function highlightWriteStep(idx) {
+  document.querySelectorAll('.seq-step').forEach((el, i) => {
+    el.classList.toggle('seq-write-current', i === idx);
+  });
+}
+
+function assignWriteStep(midi) {
+  if (!sequencer) return;
+  sequencer.steps[selectedWriteStep].midi   = midi;
+  sequencer.steps[selectedWriteStep].active = true;
+  sequencer._updateStepUI(selectedWriteStep);
+  selectedWriteStep = (selectedWriteStep + 1) % 16;
+  highlightWriteStep(selectedWriteStep);
+}
+
+function restWriteStep() {
+  if (!sequencer) return;
+  sequencer.steps[selectedWriteStep].active = false;
+  sequencer._updateStepUI(selectedWriteStep);
+  selectedWriteStep = (selectedWriteStep + 1) % 16;
+  highlightWriteStep(selectedWriteStep);
+}
+
 
 // PC keyboard → note mapping (relative to currentOctave)
 const PC_KEY_MAP = {
@@ -95,6 +121,7 @@ function addKeyHandlers(el, midi, label) {
     el.classList.add('active');
     synth.noteOn(midi);
     recMidi = midi; // update record buffer
+    if (stepWriteMode) assignWriteStep(midi);
     document.getElementById('note-display').textContent = label;
     setLed('led-audio', true);
     setTimeout(() => setLed('led-audio', false), 120);
@@ -121,6 +148,7 @@ function initPCKeyboard() {
     const midi = noteNameToMidi(note + oct);
     synth.noteOn(midi);
     recMidi = midi; // update record buffer
+    if (stepWriteMode) assignWriteStep(midi);
     const el = document.querySelector(`[data-midi="${midi}"]`);
     if (el) { el.classList.add('active'); document.getElementById('note-display').textContent = note + oct; }
   });
