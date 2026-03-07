@@ -64,13 +64,18 @@ class FMSynth {
   }
 
   _makeDistortionCurve(amount) {
-    const n = 512;
+    // amount: 0–1. Uses tanh saturation with pre-boost for musical clipping.
+    const n = 256;
     const curve = new Float32Array(n);
+    if (amount === 0) {
+      for (let i = 0; i < n; i++) curve[i] = (i * 2) / n - 1;
+      return curve;
+    }
+    const k = 1 + amount * 19; // boost: 1x at 0, 20x at 1.0
+    const norm = 1 / Math.tanh(k);
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / n - 1;
-      curve[i] = amount === 0
-        ? x
-        : ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+      curve[i] = Math.tanh(k * x) * norm;
     }
     return curve;
   }
@@ -84,8 +89,7 @@ class FMSynth {
   setReverbMix(v)    { this.reverbSend.gain.value = v * 0.35; }
   setFilterFreq(v)   { this.filter.frequency.value = v; }
   setDistortion(v) {
-    // v: 0–1, maps to curve amount 0–400
-    this.distortion.curve = this._makeDistortionCurve(v * 400);
+    this.distortion.curve = this._makeDistortionCurve(v);
   }
   setDelayTime(v) {
     this.delayNode.delayTime.value = v;
