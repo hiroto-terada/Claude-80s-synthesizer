@@ -51,6 +51,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
 
   synth     = new FMSynth(audioCtx);
   bassSynth = new TB303Synth(audioCtx);
+  drumSynth = new DrumSynth(audioCtx);
 
   document.getElementById('start-overlay').style.display = 'none';
   setLed('led-power', true);
@@ -61,6 +62,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   initKeyboardControls();
   initPCKeyboard();
   initSequencer();
+  initDrums();
 });
 
 // ── Piano Keyboard ────────────────────────────────────────
@@ -307,6 +309,7 @@ function setLed(id, on) {
   const backdrop = document.getElementById('vol-backdrop');
   const sliderSynth = document.getElementById('vol-synth');
   const sliderSeq   = document.getElementById('vol-seq');
+  const sliderDrum  = document.getElementById('vol-drum');
 
   // ── Open / Close ──
   function openDrawer() {
@@ -325,6 +328,9 @@ function setLed(id, on) {
   });
   sliderSeq.addEventListener('input', () => {
     if (bassSynth) bassSynth.setMasterVolume(parseFloat(sliderSeq.value));
+  });
+  sliderDrum.addEventListener('input', () => {
+    if (drumSynth) drumSynth.setMasterVolume(parseFloat(sliderDrum.value));
   });
 
   // ── Swipe detection ──

@@ -40,6 +40,14 @@ class Sequencer {
       { active: true,  midi: 35 },
       { active: false, midi: 35 },
     ];
+
+    // Drum steps: kick=beats 1&3, snare=beats 2&4, hihat=8th notes
+    this.drumSteps = {
+      kick:  [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
+      snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean),
+      hihat: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0].map(Boolean),
+      clap:  new Array(16).fill(false),
+    };
   }
 
   // 1 step = 1/16 note
@@ -159,6 +167,15 @@ class Sequencer {
       }
     }
 
+    // ── Drum hits ──
+    if (typeof drumSynth !== 'undefined' && drumSynth) {
+      const ds = this.drumSteps, s = this.currentStep;
+      if (ds.kick[s])  drumSynth.playKick();
+      if (ds.snare[s]) drumSynth.playSnare();
+      if (ds.hihat[s]) drumSynth.playHihat();
+      if (ds.clap[s])  drumSynth.playClap();
+    }
+
     this._highlightStep(this.currentStep);
 
     if (this.playing) {
@@ -170,6 +187,9 @@ class Sequencer {
     document.querySelectorAll('.seq-step').forEach((el, i) => {
       el.classList.toggle('seq-current', i === idx);
       el.classList.toggle('seq-rec-current', this.recording && i === idx);
+    });
+    document.querySelectorAll('.drum-pad').forEach(pad => {
+      pad.classList.toggle('drum-current', parseInt(pad.dataset.step) === idx);
     });
   }
 
