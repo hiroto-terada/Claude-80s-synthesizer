@@ -41,6 +41,8 @@ class Sequencer {
       { active: false, midi: 35 },
     ];
 
+    this.drumEnabled = false; // off by default
+
     // Drum steps: kick=beats 1&3, snare=beats 2&4, hihat=8th notes
     this.drumSteps = {
       kick:  [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
@@ -168,7 +170,7 @@ class Sequencer {
     }
 
     // ── Drum hits ──
-    if (typeof drumSynth !== 'undefined' && drumSynth) {
+    if (this.drumEnabled && typeof drumSynth !== 'undefined' && drumSynth) {
       const ds = this.drumSteps, s = this.currentStep;
       if (ds.kick[s])  drumSynth.playKick();
       if (ds.snare[s]) drumSynth.playSnare();

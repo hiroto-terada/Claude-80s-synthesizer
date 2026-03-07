@@ -101,6 +101,14 @@ function initDrums() {
   const container = document.getElementById('drum-grid');
   if (!container) return;
 
+  // ON/OFF toggle
+  const toggleBtn = document.getElementById('drum-toggle-btn');
+  toggleBtn.addEventListener('click', () => {
+    sequencer.drumEnabled = !sequencer.drumEnabled;
+    toggleBtn.textContent = sequencer.drumEnabled ? 'ON' : 'OFF';
+    toggleBtn.classList.toggle('active', sequencer.drumEnabled);
+  });
+
   DRUM_TRACKS.forEach(track => {
     const row = document.createElement('div');
     row.className = 'drum-row';
