@@ -208,10 +208,15 @@ function initSequencer() {
     container.appendChild(div);
   });
 
-  // Note up / down / toggle
+  // Note up / down / toggle / step-write selection
   container.addEventListener('click', e => {
     const btn = e.target;
-    const stepIdx = parseInt(btn.dataset.step);
+    // Step index from the clicked element or its parent .seq-step cell
+    let stepIdx = parseInt(btn.dataset.step);
+    if (isNaN(stepIdx)) {
+      const cell = btn.closest('.seq-step');
+      if (cell) stepIdx = parseInt(cell.dataset.step);
+    }
     if (isNaN(stepIdx)) return;
 
     const step = sequencer.steps[stepIdx];
@@ -227,7 +232,33 @@ function initSequencer() {
       btn.textContent = step.active ? 'ON' : '—';
       btn.classList.toggle('active', step.active);
       container.children[stepIdx].classList.toggle('seq-on', step.active);
+    } else if (typeof stepWriteMode !== 'undefined' && stepWriteMode) {
+      // In step write mode: clicking anywhere on the cell selects that step
+      selectedWriteStep = stepIdx;
+      highlightWriteStep(stepIdx);
     }
+  });
+
+  // STEP write mode button
+  const stepWriteBtn = document.getElementById('seq-step-write-btn');
+  const restBtn2     = document.getElementById('seq-rest-btn');
+
+  stepWriteBtn.addEventListener('click', () => {
+    stepWriteMode = !stepWriteMode;
+    if (stepWriteMode) {
+      stepWriteBtn.classList.add('active');
+      restBtn2.style.display = '';
+      selectedWriteStep = 0;
+      highlightWriteStep(0);
+    } else {
+      stepWriteBtn.classList.remove('active');
+      restBtn2.style.display = 'none';
+      highlightWriteStep(-1);
+    }
+  });
+
+  restBtn2.addEventListener('click', () => {
+    if (typeof restWriteStep === 'function') restWriteStep();
   });
 
   // REC button
