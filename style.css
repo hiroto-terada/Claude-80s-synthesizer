@@ -523,7 +523,7 @@ header {
 #vol-drawer {
   position: fixed;
   top: 0; left: 0; bottom: 0;
-  width: 130px;
+  width: 175px;
   background: var(--panel);
   border-right: 1px solid var(--border);
   z-index: 100;
@@ -597,4 +597,67 @@ header {
   opacity: 0.5;
   z-index: 89;
   pointer-events: none;
+}
+
+/* ── Drum Section ── */
+#drum-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 10px;
+}
+
+.drum-header {
+  font-size: 0.5rem;
+  letter-spacing: 3px;
+  color: var(--pink);
+  margin-bottom: 5px;
+}
+
+.drum-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0;
+}
+.drum-row + .drum-row {
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.drum-label {
+  font-size: 0.4rem;
+  letter-spacing: 1px;
+  color: var(--dim);
+  width: 34px;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 5px;
+}
+
+.drum-pad {
+  flex: 1;
+  max-width: 32px;
+  aspect-ratio: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.1s, box-shadow 0.1s;
+}
+.drum-pad:hover {
+  background: rgba(255,255,255,0.12);
+}
+.drum-pad.active {
+  background: var(--pad-color);
+  border-color: var(--pad-color);
+  box-shadow: 0 0 5px var(--pad-color);
+}
+.drum-pad.beat-end {
+  margin-right: 4px;
+}
+/* Current step indicator (playing) */
+.drum-pad.drum-current {
+  outline: 1px solid rgba(255,255,255,0.35);
+  outline-offset: 1px;
 }
