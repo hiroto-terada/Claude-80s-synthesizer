@@ -612,6 +612,9 @@ header {
   letter-spacing: 3px;
   color: var(--pink);
   margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .drum-row {
@@ -660,4 +663,23 @@ header {
 .drum-pad.drum-current {
   outline: 1px solid rgba(255,255,255,0.35);
   outline-offset: 1px;
+}
+
+.drum-toggle {
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.drum-toggle.active {
+  border-color: #aaff44;
+  color: #aaff44;
+  background: rgba(170,255,68,0.1);
+  box-shadow: 0 0 6px rgba(170,255,68,0.3);
 }
