@@ -12,7 +12,7 @@ function seqMidiToName(midi) {
 
 class Sequencer {
   constructor() {
-    this.bpm = 120;
+    this.bpm = 65;
     this.playing = false;
     this.currentStep = -1;
     this._timerId = null;
