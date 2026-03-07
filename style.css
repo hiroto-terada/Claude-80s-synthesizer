@@ -339,25 +339,44 @@ header {
   color: var(--dim);
 }
 
-#seq-play-btn {
-  margin-left: auto;
+#seq-rec-btn, #seq-play-btn {
   background: transparent;
   border: 1px solid var(--accent);
   color: var(--accent);
   font-family: var(--mono);
   font-size: 0.65rem;
   letter-spacing: 2px;
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s;
 }
+#seq-play-btn { margin-left: auto; }
+#seq-rec-btn  { margin-left: auto; }
+#seq-rec-btn:hover  { background: rgba(0,229,255,0.1); }
 #seq-play-btn:hover { background: rgba(0,229,255,0.1); }
+
+#seq-rec-btn.recording {
+  border-color: #ff3333;
+  color: #ff3333;
+  background: rgba(255,51,51,0.1);
+  box-shadow: 0 0 8px rgba(255,51,51,0.4);
+  animation: rec-blink 1s step-start infinite;
+}
+@keyframes rec-blink {
+  50% { opacity: 0.5; }
+}
+
 #seq-play-btn.playing {
   border-color: var(--pink);
   color: var(--pink);
   background: rgba(255,77,166,0.08);
   box-shadow: 0 0 8px rgba(255,77,166,0.3);
+}
+
+.seq-step.seq-rec-current {
+  outline: 2px solid #ff3333;
+  background: rgba(255,51,51,0.08);
 }
 
 #seq-steps {

@@ -6,6 +6,7 @@ let audioCtx  = null;
 let synth     = null;
 let bassSynth = null;  // TB-303 bass for step sequencer
 let currentOctave = 4;
+let recMidi   = null;  // last MIDI note pressed (for record mode)
 
 // PC keyboard → note mapping (relative to currentOctave)
 const PC_KEY_MAP = {
@@ -93,6 +94,7 @@ function addKeyHandlers(el, midi, label) {
     if (audioCtx && audioCtx.state !== 'running') audioCtx.resume();
     el.classList.add('active');
     synth.noteOn(midi);
+    recMidi = midi; // update record buffer
     document.getElementById('note-display').textContent = label;
     setLed('led-audio', true);
     setTimeout(() => setLed('led-audio', false), 120);
@@ -118,6 +120,7 @@ function initPCKeyboard() {
     if (note.endsWith('+')) { note = note.slice(0, -1); oct++; }
     const midi = noteNameToMidi(note + oct);
     synth.noteOn(midi);
+    recMidi = midi; // update record buffer
     const el = document.querySelector(`[data-midi="${midi}"]`);
     if (el) { el.classList.add('active'); document.getElementById('note-display').textContent = note + oct; }
   });

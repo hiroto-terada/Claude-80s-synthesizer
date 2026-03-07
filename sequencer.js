@@ -16,6 +16,9 @@ class Sequencer {
     this.playing = false;
     this.currentStep = -1;
     this._timerId = null;
+    this.recording = false;
+    this._recStepsLeft = 0;
+    this.onRecordStop = null; // callback when recording finishes
 
     // Default: B1, every other step ON
     this.steps = [
@@ -51,6 +54,8 @@ class Sequencer {
   }
 
   stop() {
+    this.recording = false;
+    this._recStepsLeft = 0;
     this.playing = false;
     clearTimeout(this._timerId);
     if (typeof bassSynth !== 'undefined' && bassSynth) bassSynth.allNotesOff();
@@ -58,10 +63,42 @@ class Sequencer {
     this.currentStep = -1;
   }
 
+  startRecord() {
+    this._recStepsLeft = 16;
+    this.recording = true;
+    if (!this.playing) {
+      this.playing = true;
+      this.currentStep = -1;
+      this._tick();
+    }
+  }
+
   _tick() {
     this.currentStep = (this.currentStep + 1) % 16;
-    const step = this.steps[this.currentStep];
 
+    // ── Recording: capture last pressed note into this step ──
+    if (this.recording) {
+      const held = (typeof recMidi !== 'undefined' && recMidi !== null);
+      const step = this.steps[this.currentStep];
+      if (held) {
+        step.midi   = recMidi;
+        step.active = true;
+      } else {
+        step.active = false;
+      }
+      this._updateStepUI(this.currentStep);
+      // Reset so next step starts fresh
+      if (typeof recMidi !== 'undefined') recMidi = null;
+
+      this._recStepsLeft--;
+      if (this._recStepsLeft <= 0) {
+        this.recording = false;
+        if (typeof this.onRecordStop === 'function') this.onRecordStop();
+      }
+    }
+
+    // ── Playback ──
+    const step = this.steps[this.currentStep];
     if (typeof bassSynth !== 'undefined' && bassSynth) {
       bassSynth.allNotesOff();
       if (step.active) {
@@ -83,7 +120,22 @@ class Sequencer {
   _highlightStep(idx) {
     document.querySelectorAll('.seq-step').forEach((el, i) => {
       el.classList.toggle('seq-current', i === idx);
+      el.classList.toggle('seq-rec-current', this.recording && i === idx);
     });
+  }
+
+  _updateStepUI(idx) {
+    const step = this.steps[idx];
+    const cell = document.querySelector(`.seq-step[data-step="${idx}"]`);
+    if (!cell) return;
+    const nameEl = document.getElementById(`seq-note-${idx}`);
+    if (nameEl) nameEl.textContent = seqMidiToName(step.midi);
+    const toggle = cell.querySelector('.seq-toggle');
+    if (toggle) {
+      toggle.textContent = step.active ? 'ON' : '—';
+      toggle.classList.toggle('active', step.active);
+    }
+    cell.classList.toggle('seq-on', step.active);
   }
 }
 
@@ -129,18 +181,40 @@ function initSequencer() {
     }
   });
 
-  // Play / Stop
+  // REC button
+  const recBtn  = document.getElementById('seq-rec-btn');
   const playBtn = document.getElementById('seq-play-btn');
+
+  function setPlayBtnState(playing) {
+    playBtn.textContent = playing ? '■ STOP' : '▶ PLAY';
+    playBtn.classList.toggle('playing', playing);
+  }
+
+  recBtn.addEventListener('click', () => {
+    if (!bassSynth) return;
+    if (sequencer.recording) return; // already recording, ignore
+    recBtn.classList.add('recording');
+    recBtn.textContent = '⏹ REC';
+    setPlayBtnState(true);
+    sequencer.onRecordStop = () => {
+      recBtn.classList.remove('recording');
+      recBtn.textContent = '⏺ REC';
+      setPlayBtnState(sequencer.playing);
+    };
+    sequencer.startRecord();
+  });
+
+  // Play / Stop
   playBtn.addEventListener('click', () => {
     if (!bassSynth) return;
     if (sequencer.playing) {
       sequencer.stop();
-      playBtn.textContent = '▶ PLAY';
-      playBtn.classList.remove('playing');
+      recBtn.classList.remove('recording');
+      recBtn.textContent = '⏺ REC';
+      setPlayBtnState(false);
     } else {
       sequencer.play();
-      playBtn.textContent = '■ STOP';
-      playBtn.classList.add('playing');
+      setPlayBtnState(true);
     }
   });
 
