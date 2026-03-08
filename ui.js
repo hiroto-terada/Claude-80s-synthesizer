@@ -13,7 +13,8 @@ window.addEventListener('gesturechange', e => e.preventDefault(), { passive: fal
 
 let audioCtx  = null;
 let synth     = null;
-let bassSynth = null;  // TB-303 bass for step sequencer
+let bassSynth  = null;  // TB-303 bass for step sequencer 1
+let bassSynth2 = null;  // TB-303 bass for step sequencer 2
 let currentOctave = 4;
 let recMidi   = null;  // last MIDI note pressed (for record mode)
 let activeWriteSeq    = null;  // which sequencer is in step write mode (null = off)
@@ -64,9 +65,10 @@ document.getElementById('start-btn').addEventListener('click', () => {
   // iOS: resume context (may be suspended even after user gesture)
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
-  synth     = new FMSynth(audioCtx);
-  bassSynth = new TB303Synth(audioCtx);
-  drumSynth = new DrumSynth(audioCtx);
+  synth      = new FMSynth(audioCtx);
+  bassSynth  = new TB303Synth(audioCtx);
+  bassSynth2 = new TB303Synth(audioCtx);
+  drumSynth  = new DrumSynth(audioCtx);
 
   document.getElementById('start-overlay').style.display = 'none';
   setLed('led-power', true);
@@ -77,7 +79,9 @@ document.getElementById('start-btn').addEventListener('click', () => {
   initKeyboardControls();
   initPCKeyboard();
   initSequencer();
+  sequencer._bassSynth = bassSynth;
   initSequencer2();
+  sequencer2._bassSynth = bassSynth2;
   initSeq2Toggle();
   initDrums();
 });
@@ -347,7 +351,9 @@ function setLed(id, on) {
     if (synth) synth.setMasterVolume(parseFloat(sliderSynth.value));
   });
   sliderSeq.addEventListener('input', () => {
-    if (bassSynth) bassSynth.setMasterVolume(parseFloat(sliderSeq.value));
+    const v = parseFloat(sliderSeq.value);
+    if (bassSynth)  bassSynth.setMasterVolume(v);
+    if (bassSynth2) bassSynth2.setMasterVolume(v);
   });
   sliderDrum.addEventListener('input', () => {
     if (drumSynth) drumSynth.setMasterVolume(parseFloat(sliderDrum.value));
