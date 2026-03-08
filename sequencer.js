@@ -345,15 +345,20 @@ function _buildSeqUI(seq, opts) {
     }
   });
 
-  // BPM controls
+  // BPM controls (both sequencers stay in sync)
+  function applyBpm(newBpm) {
+    [sequencer, sequencer2].forEach(s => { if (s) s.bpm = newBpm; });
+    ['bpm-display', 'bpm2-display'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = newBpm;
+    });
+  }
   const bpmDisplay = document.getElementById(bpmDisplayId);
   document.getElementById(bpmDownId).addEventListener('click', () => {
-    seq.bpm = Math.max(40, seq.bpm - 5);
-    bpmDisplay.textContent = seq.bpm;
+    applyBpm(Math.max(40, seq.bpm - 5));
   });
   document.getElementById(bpmUpId).addEventListener('click', () => {
-    seq.bpm = Math.min(240, seq.bpm + 5);
-    bpmDisplay.textContent = seq.bpm;
+    applyBpm(Math.min(240, seq.bpm + 5));
   });
 }
 
