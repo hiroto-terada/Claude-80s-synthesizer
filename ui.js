@@ -4,11 +4,12 @@
 
 // ── ピンチズーム無効化（iOS Safari 対策・キャプチャフェーズ）──
 // capture: true により stopPropagation で止められた要素でも確実にブロック
+// touchstart でも 2 本指を止める（iOS は touchstart 時点でズームを判断するため必須）
+const _noZoom = e => { if (e.touches && e.touches.length > 1) e.preventDefault(); };
+window.addEventListener('touchstart',  _noZoom, { passive: false, capture: true });
+window.addEventListener('touchmove',   _noZoom, { passive: false, capture: true });
 window.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false, capture: true });
 window.addEventListener('gesturechange', e => e.preventDefault(), { passive: false, capture: true });
-window.addEventListener('touchmove', e => {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false, capture: true });
 
 let audioCtx  = null;
 let synth     = null;
