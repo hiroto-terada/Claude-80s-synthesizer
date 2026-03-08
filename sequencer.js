@@ -11,7 +11,12 @@ function seqMidiToName(midi) {
 }
 
 class Sequencer {
-  constructor() {
+  constructor(opts = {}) {
+    this._containerId = opts.containerId || 'seq-steps';
+    this._prefix      = opts.prefix      || 'seq';
+    this._stepWriteBtn = null; // set by _buildSeqUI
+    this._restBtn      = null; // set by _buildSeqUI
+
     this.bpm = 65;
     this.playing = false;
     this.currentStep = -1;
@@ -19,11 +24,11 @@ class Sequencer {
     this.recording = false;
     this._recStepsLeft = 0;
     this._metronomeOn = false;
-    this.onRecordStop = null; // callback when recording finishes
+    this.onRecordStop = null;
 
     // Default: B1, every other step ON
     this.steps = [
-      { active: true,  midi: 35 },  // B1
+      { active: true,  midi: 35 },
       { active: false, midi: 35 },
       { active: true,  midi: 35 },
       { active: false, midi: 35 },
@@ -41,9 +46,8 @@ class Sequencer {
       { active: false, midi: 35 },
     ];
 
-    this.drumEnabled = false; // off by default
+    this.drumEnabled = false;
 
-    // Drum steps: kick=beats 1&3, snare=beats 2&4, hihat=8th notes
     this.drumSteps = {
       kick:  [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
       snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean),
@@ -52,17 +56,14 @@ class Sequencer {
     };
   }
 
-  // 1 step = 1/16 note
   get stepMs() {
     return (60 / this.bpm) / 4 * 1000;
   }
 
-  // 1 beat = 4 steps (1/4 note)
   get beatMs() {
     return this.stepMs * 4;
   }
 
-  // Short click sound via Web Audio API
   _playClick(accent = false) {
     const ctx = (typeof audioCtx !== 'undefined') ? audioCtx : null;
     if (!ctx || ctx.state !== 'running') return;
@@ -78,7 +79,6 @@ class Sequencer {
     osc.stop(now + 0.03);
   }
 
-  // 4-beat countdown, then call cb
   _doCountdown(cb) {
     let beat = 4;
     const fire = () => {
@@ -115,9 +115,8 @@ class Sequencer {
   }
 
   startRecord() {
-    // Stop any current playback and restart fresh with countdown
     this.stop();
-    this._metronomeOn = true; // keep metronome on through countdown AND recording
+    this._metronomeOn = true;
     this._doCountdown(() => {
       this._recStepsLeft = 16;
       this.recording = true;
@@ -130,12 +129,10 @@ class Sequencer {
   _tick() {
     this.currentStep = (this.currentStep + 1) % 16;
 
-    // ── Click track: fires on every beat (independent of recording state) ──
     if (this._metronomeOn && this.currentStep % 4 === 0) {
       this._playClick(this.currentStep === 0);
     }
 
-    // ── Recording: capture last pressed note into this step ──
     if (this.recording) {
       const held = (typeof recMidi !== 'undefined' && recMidi !== null);
       const step = this.steps[this.currentStep];
@@ -146,7 +143,6 @@ class Sequencer {
         step.active = false;
       }
       this._updateStepUI(this.currentStep);
-      // Reset so next step starts fresh
       if (typeof recMidi !== 'undefined') recMidi = null;
 
       this._recStepsLeft--;
@@ -156,7 +152,6 @@ class Sequencer {
       }
     }
 
-    // ── Playback ──
     const step = this.steps[this.currentStep];
     if (typeof bassSynth !== 'undefined' && bassSynth) {
       bassSynth.allNotesOff();
@@ -169,7 +164,6 @@ class Sequencer {
       }
     }
 
-    // ── Drum hits ──
     if (this.drumEnabled && typeof drumSynth !== 'undefined' && drumSynth) {
       const ds = this.drumSteps, s = this.currentStep;
       if (ds.kick[s])  drumSynth.playKick();
@@ -186,10 +180,14 @@ class Sequencer {
   }
 
   _highlightStep(idx) {
-    document.querySelectorAll('.seq-step').forEach((el, i) => {
-      el.classList.toggle('seq-current', i === idx);
-      el.classList.toggle('seq-rec-current', this.recording && i === idx);
-    });
+    const container = document.getElementById(this._containerId);
+    if (container) {
+      container.querySelectorAll('.seq-step').forEach((el, i) => {
+        el.classList.toggle('seq-current', i === idx);
+        el.classList.toggle('seq-rec-current', this.recording && i === idx);
+      });
+    }
+    // Drum pad highlights (only meaningful for SEQ 1 which owns the drum grid)
     document.querySelectorAll('.drum-pad').forEach(pad => {
       pad.classList.toggle('drum-current', parseInt(pad.dataset.step) === idx);
     });
@@ -197,9 +195,11 @@ class Sequencer {
 
   _updateStepUI(idx) {
     const step = this.steps[idx];
-    const cell = document.querySelector(`.seq-step[data-step="${idx}"]`);
+    const container = document.getElementById(this._containerId);
+    if (!container) return;
+    const cell = container.querySelector(`.seq-step[data-step="${idx}"]`);
     if (!cell) return;
-    const nameEl = document.getElementById(`seq-note-${idx}`);
+    const nameEl = document.getElementById(`${this._prefix}-note-${idx}`);
     if (nameEl) nameEl.textContent = seqMidiToName(step.midi);
     const toggle = cell.querySelector('.seq-toggle');
     if (toggle) {
@@ -210,30 +210,35 @@ class Sequencer {
   }
 }
 
-let sequencer = null;
+let sequencer  = null;
+let sequencer2 = null;
 
-function initSequencer() {
-  sequencer = new Sequencer();
+// ── Generic sequencer UI builder ──────────────────────────
+function _buildSeqUI(seq, opts) {
+  const {
+    stepsId, stepWriteBtnId, restBtnId, recBtnId,
+    playBtnId, bpmDisplayId, bpmDownId, bpmUpId,
+  } = opts;
+  const prefix = seq._prefix;
 
   // Build step cells
-  const container = document.getElementById('seq-steps');
-  sequencer.steps.forEach((step, i) => {
+  const container = document.getElementById(stepsId);
+  seq.steps.forEach((step, i) => {
     const div = document.createElement('div');
     div.className = 'seq-step' + (step.active ? ' seq-on' : '');
     div.dataset.step = i;
     div.innerHTML =
       `<div class="seq-step-num">${i + 1}</div>` +
       `<button class="seq-note-btn seq-note-up" data-step="${i}">▲</button>` +
-      `<div class="seq-note-name" id="seq-note-${i}">${seqMidiToName(step.midi)}</div>` +
+      `<div class="seq-note-name" id="${prefix}-note-${i}">${seqMidiToName(step.midi)}</div>` +
       `<button class="seq-note-btn seq-note-dn" data-step="${i}">▼</button>` +
       `<button class="seq-toggle${step.active ? ' active' : ''}" data-step="${i}">${step.active ? 'ON' : '—'}</button>`;
     container.appendChild(div);
   });
 
-  // Note up / down / toggle / step-write selection
+  // Step cell events
   container.addEventListener('click', e => {
     const btn = e.target;
-    // Step index from the clicked element or its parent .seq-step cell
     let stepIdx = parseInt(btn.dataset.step);
     if (isNaN(stepIdx)) {
       const cell = btn.closest('.seq-step');
@@ -241,51 +246,68 @@ function initSequencer() {
     }
     if (isNaN(stepIdx)) return;
 
-    const step = sequencer.steps[stepIdx];
+    const step = seq.steps[stepIdx];
 
     if (btn.classList.contains('seq-note-up')) {
       step.midi = Math.min(72, step.midi + 1);
-      document.getElementById(`seq-note-${stepIdx}`).textContent = seqMidiToName(step.midi);
+      document.getElementById(`${prefix}-note-${stepIdx}`).textContent = seqMidiToName(step.midi);
     } else if (btn.classList.contains('seq-note-dn')) {
       step.midi = Math.max(24, step.midi - 1);
-      document.getElementById(`seq-note-${stepIdx}`).textContent = seqMidiToName(step.midi);
+      document.getElementById(`${prefix}-note-${stepIdx}`).textContent = seqMidiToName(step.midi);
     } else if (btn.classList.contains('seq-toggle')) {
       step.active = !step.active;
       btn.textContent = step.active ? 'ON' : '—';
       btn.classList.toggle('active', step.active);
       container.children[stepIdx].classList.toggle('seq-on', step.active);
-    } else if (typeof stepWriteMode !== 'undefined' && stepWriteMode) {
-      // In step write mode: clicking anywhere on the cell selects that step
-      selectedWriteStep = stepIdx;
-      highlightWriteStep(stepIdx);
+    } else if (typeof activeWriteSeq !== 'undefined' && activeWriteSeq === seq) {
+      // Step write mode: tap cell to move write cursor
+      if (typeof selectedWriteStep !== 'undefined') {
+        selectedWriteStep = stepIdx;
+        if (typeof highlightWriteStep === 'function') highlightWriteStep(stepIdx);
+      }
     }
   });
 
-  // STEP write mode button
-  const stepWriteBtn = document.getElementById('seq-step-write-btn');
-  const restBtn2     = document.getElementById('seq-rest-btn');
+  // STEP write button
+  const stepWriteBtn = document.getElementById(stepWriteBtnId);
+  const restBtn      = document.getElementById(restBtnId);
+  seq._stepWriteBtn  = stepWriteBtn;
+  seq._restBtn       = restBtn;
 
   stepWriteBtn.addEventListener('click', () => {
-    stepWriteMode = !stepWriteMode;
-    if (stepWriteMode) {
-      stepWriteBtn.classList.add('active');
-      restBtn2.style.display = '';
-      selectedWriteStep = 0;
-      highlightWriteStep(0);
-    } else {
+    if (typeof activeWriteSeq === 'undefined') return;
+
+    if (activeWriteSeq === seq) {
+      // Turn off
+      activeWriteSeq = null;
       stepWriteBtn.classList.remove('active');
-      restBtn2.style.display = 'none';
-      highlightWriteStep(-1);
+      restBtn.style.display = 'none';
+      if (typeof highlightWriteStep === 'function') highlightWriteStep(-1);
+    } else {
+      // Deactivate any currently active write seq
+      [sequencer, sequencer2].forEach(s => {
+        if (s && s._stepWriteBtn) {
+          s._stepWriteBtn.classList.remove('active');
+          s._restBtn.style.display = 'none';
+        }
+      });
+      if (typeof highlightWriteStep === 'function') highlightWriteStep(-1);
+
+      activeWriteSeq = seq;
+      stepWriteBtn.classList.add('active');
+      restBtn.style.display = '';
+      if (typeof selectedWriteStep !== 'undefined') selectedWriteStep = 0;
+      if (typeof highlightWriteStep === 'function') highlightWriteStep(0);
     }
   });
 
-  restBtn2.addEventListener('click', () => {
+  restBtn.addEventListener('click', () => {
     if (typeof restWriteStep === 'function') restWriteStep();
   });
 
   // REC button
-  const recBtn  = document.getElementById('seq-rec-btn');
-  const playBtn = document.getElementById('seq-play-btn');
+  const recBtn  = document.getElementById(recBtnId);
+  const playBtn = document.getElementById(playBtnId);
 
   function setPlayBtnState(playing) {
     playBtn.textContent = playing ? '■ STOP' : '▶ PLAY';
@@ -294,43 +316,71 @@ function initSequencer() {
 
   recBtn.addEventListener('click', () => {
     if (!bassSynth) return;
-    if (sequencer.recording) return;
+    if (seq.recording) return;
     recBtn.classList.add('recording');
     setPlayBtnState(true);
 
-    sequencer.onCountdown = (beat) => {
+    seq.onCountdown = (beat) => {
       recBtn.textContent = beat > 0 ? `${beat}...` : '⏹ REC';
     };
-    sequencer.onRecordStop = () => {
+    seq.onRecordStop = () => {
       recBtn.classList.remove('recording');
       recBtn.textContent = '⏺ REC';
-      setPlayBtnState(sequencer.playing);
+      setPlayBtnState(seq.playing);
     };
-    sequencer.startRecord();
+    seq.startRecord();
   });
 
-  // Play / Stop
+  // PLAY / STOP
   playBtn.addEventListener('click', () => {
     if (!bassSynth) return;
-    if (sequencer.playing) {
-      sequencer.stop();
+    if (seq.playing) {
+      seq.stop();
       recBtn.classList.remove('recording');
       recBtn.textContent = '⏺ REC';
       setPlayBtnState(false);
     } else {
-      sequencer.play();
+      seq.play();
       setPlayBtnState(true);
     }
   });
 
-  // BPM controls (5 BPM per click)
-  const bpmDisplay = document.getElementById('bpm-display');
-  document.getElementById('bpm-down').addEventListener('click', () => {
-    sequencer.bpm = Math.max(40, sequencer.bpm - 5);
-    bpmDisplay.textContent = sequencer.bpm;
+  // BPM controls
+  const bpmDisplay = document.getElementById(bpmDisplayId);
+  document.getElementById(bpmDownId).addEventListener('click', () => {
+    seq.bpm = Math.max(40, seq.bpm - 5);
+    bpmDisplay.textContent = seq.bpm;
   });
-  document.getElementById('bpm-up').addEventListener('click', () => {
-    sequencer.bpm = Math.min(240, sequencer.bpm + 5);
-    bpmDisplay.textContent = sequencer.bpm;
+  document.getElementById(bpmUpId).addEventListener('click', () => {
+    seq.bpm = Math.min(240, seq.bpm + 5);
+    bpmDisplay.textContent = seq.bpm;
+  });
+}
+
+function initSequencer() {
+  sequencer = new Sequencer({ containerId: 'seq-steps', prefix: 'seq' });
+  _buildSeqUI(sequencer, {
+    stepsId:        'seq-steps',
+    stepWriteBtnId: 'seq-step-write-btn',
+    restBtnId:      'seq-rest-btn',
+    recBtnId:       'seq-rec-btn',
+    playBtnId:      'seq-play-btn',
+    bpmDisplayId:   'bpm-display',
+    bpmDownId:      'bpm-down',
+    bpmUpId:        'bpm-up',
+  });
+}
+
+function initSequencer2() {
+  sequencer2 = new Sequencer({ containerId: 'seq2-steps', prefix: 'seq2' });
+  _buildSeqUI(sequencer2, {
+    stepsId:        'seq2-steps',
+    stepWriteBtnId: 'seq2-step-write-btn',
+    restBtnId:      'seq2-rest-btn',
+    recBtnId:       'seq2-rec-btn',
+    playBtnId:      'seq2-play-btn',
+    bpmDisplayId:   'bpm2-display',
+    bpmDownId:      'bpm2-down',
+    bpmUpId:        'bpm2-up',
   });
 }
