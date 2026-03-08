@@ -34,6 +34,8 @@ class Sequencer {
       active: da === true ? true : da === false ? false : i % 2 === 0,
     }));
 
+    this._bassSynth = null; // assigned after construction by init code
+
     this.drumEnabled = false;
 
     this.drumSteps = {
@@ -97,7 +99,7 @@ class Sequencer {
     this._metronomeOn = false;
     this.playing = false;
     clearTimeout(this._timerId);
-    if (typeof bassSynth !== 'undefined' && bassSynth) bassSynth.allNotesOff();
+    if (this._bassSynth) this._bassSynth.allNotesOff();
     this._highlightStep(-1);
     this.currentStep = -1;
   }
@@ -141,13 +143,13 @@ class Sequencer {
     }
 
     const step = this.steps[this.currentStep];
-    if (typeof bassSynth !== 'undefined' && bassSynth) {
-      bassSynth.allNotesOff();
+    if (this._bassSynth) {
+      this._bassSynth.allNotesOff();
       if (step.active) {
-        bassSynth.noteOn(step.midi);
+        this._bassSynth.noteOn(step.midi);
         const noteOff = step.midi;
         setTimeout(() => {
-          if (typeof bassSynth !== 'undefined' && bassSynth) bassSynth.noteOff(noteOff);
+          if (this._bassSynth) this._bassSynth.noteOff(noteOff);
         }, this.stepMs * 0.8);
       }
     }
