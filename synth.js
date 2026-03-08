@@ -264,14 +264,15 @@ class TB303Synth {
     osc.frequency.value = freq;
 
     // Resonant lowpass filter — the signature 303 "squelch"
+    // baseCutoff tracks the note so the fundamental always passes through
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.Q.value = 16;
-    const baseCutoff = 280;
-    const envPeak    = baseCutoff + 2200;
+    filter.Q.value = 8;
+    const baseCutoff = Math.max(80, freq * 0.9);
+    const envPeak    = Math.min(8000, baseCutoff + 1800 + freq * 2);
     filter.frequency.setValueAtTime(baseCutoff, now);
-    filter.frequency.linearRampToValueAtTime(envPeak, now + 0.004);
-    filter.frequency.exponentialRampToValueAtTime(baseCutoff, now + 0.32);
+    filter.frequency.linearRampToValueAtTime(envPeak, now + 0.005);
+    filter.frequency.exponentialRampToValueAtTime(baseCutoff, now + 0.35);
 
     // Amplitude envelope: punchy attack, short decay, low sustain
     const ampEnv = this.ctx.createGain();
