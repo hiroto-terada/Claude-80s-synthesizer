@@ -28,8 +28,9 @@ class Sequencer {
 
     // Default steps: opts.defaultActive=true→all on, false→all off, null→alternating
     const da = opts.defaultActive;
+    const defaultMidi = opts.defaultMidi !== undefined ? opts.defaultMidi : 35;
     this.steps = Array.from({ length: 16 }, (_, i) => ({
-      midi: 35,
+      midi: defaultMidi,
       active: da === true ? true : da === false ? false : i % 2 === 0,
     }));
 
@@ -357,7 +358,7 @@ function _buildSeqUI(seq, opts) {
 }
 
 function initSequencer() {
-  sequencer = new Sequencer({ containerId: 'seq-steps', prefix: 'seq' });
+  sequencer = new Sequencer({ containerId: 'seq-steps', prefix: 'seq', defaultMidi: 47 });
   _buildSeqUI(sequencer, {
     stepsId:        'seq-steps',
     stepWriteBtnId: 'seq-step-write-btn',
