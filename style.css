@@ -594,7 +594,7 @@ header {
   transform: translateY(-50%);
   width: 6px;
   height: 48px;
-  background: var(--cyan);
+  background: var(--pink);
   border-radius: 0 3px 3px 0;
   opacity: 0.5;
   z-index: 89;
