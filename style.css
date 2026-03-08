@@ -455,6 +455,17 @@ header {
 .seq-pattern-slot.loaded {
   background: rgba(0,229,255,0.12);
 }
+
+/* Pending slot: queued to switch at next loop start */
+.seq-pattern-slot.pending {
+  border-color: var(--pink);
+  color: var(--pink);
+  animation: pattern-pending 0.7s step-start infinite;
+}
+@keyframes pattern-pending {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
 #seq-play-btn:hover, #seq2-play-btn:hover { background: rgba(0,229,255,0.1); }
 
 #seq-rec-btn.recording, #seq2-rec-btn.recording {
