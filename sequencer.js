@@ -26,25 +26,12 @@ class Sequencer {
     this._metronomeOn = false;
     this.onRecordStop = null;
 
-    // Default: B1, every other step ON
-    this.steps = [
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-      { active: true,  midi: 35 },
-      { active: false, midi: 35 },
-    ];
+    // Default steps: opts.defaultActive=true→all on, false→all off, null→alternating
+    const da = opts.defaultActive;
+    this.steps = Array.from({ length: 16 }, (_, i) => ({
+      midi: 35,
+      active: da === true ? true : da === false ? false : i % 2 === 0,
+    }));
 
     this.drumEnabled = false;
 
@@ -305,20 +292,25 @@ function _buildSeqUI(seq, opts) {
     if (typeof restWriteStep === 'function') restWriteStep();
   });
 
-  // REC button
+  // REC / PLAY buttons (store refs on seq for cross-seq sync)
   const recBtn  = document.getElementById(recBtnId);
   const playBtn = document.getElementById(playBtnId);
+  seq._playBtn = playBtn;
+  seq._recBtn  = recBtn;
 
-  function setPlayBtnState(playing) {
-    playBtn.textContent = playing ? '■ STOP' : '▶ PLAY';
-    playBtn.classList.toggle('playing', playing);
+  function setAllPlayBtnState(playing) {
+    [sequencer, sequencer2].forEach(s => {
+      if (!s || !s._playBtn) return;
+      s._playBtn.textContent = playing ? '■ STOP' : '▶ PLAY';
+      s._playBtn.classList.toggle('playing', playing);
+    });
   }
 
   recBtn.addEventListener('click', () => {
     if (!bassSynth) return;
     if (seq.recording) return;
     recBtn.classList.add('recording');
-    setPlayBtnState(true);
+    setAllPlayBtnState(true);
 
     seq.onCountdown = (beat) => {
       recBtn.textContent = beat > 0 ? `${beat}...` : '⏹ REC';
@@ -326,22 +318,24 @@ function _buildSeqUI(seq, opts) {
     seq.onRecordStop = () => {
       recBtn.classList.remove('recording');
       recBtn.textContent = '⏺ REC';
-      setPlayBtnState(seq.playing);
+      setAllPlayBtnState(seq.playing);
     };
     seq.startRecord();
   });
 
-  // PLAY / STOP
+  // PLAY / STOP — both sequencers start/stop together
   playBtn.addEventListener('click', () => {
     if (!bassSynth) return;
     if (seq.playing) {
-      seq.stop();
-      recBtn.classList.remove('recording');
-      recBtn.textContent = '⏺ REC';
-      setPlayBtnState(false);
+      [sequencer, sequencer2].forEach(s => {
+        if (!s) return;
+        s.stop();
+        if (s._recBtn) { s._recBtn.classList.remove('recording'); s._recBtn.textContent = '⏺ REC'; }
+      });
+      setAllPlayBtnState(false);
     } else {
-      seq.play();
-      setPlayBtnState(true);
+      [sequencer, sequencer2].forEach(s => { if (s) s.play(); });
+      setAllPlayBtnState(true);
     }
   });
 
@@ -377,7 +371,7 @@ function initSequencer() {
 }
 
 function initSequencer2() {
-  sequencer2 = new Sequencer({ containerId: 'seq2-steps', prefix: 'seq2' });
+  sequencer2 = new Sequencer({ containerId: 'seq2-steps', prefix: 'seq2', defaultActive: false });
   _buildSeqUI(sequencer2, {
     stepsId:        'seq2-steps',
     stepWriteBtnId: 'seq2-step-write-btn',
