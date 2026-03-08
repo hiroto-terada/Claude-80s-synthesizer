@@ -35,6 +35,7 @@ class Sequencer {
     }));
 
     this._bassSynth = null; // assigned after construction by init code
+    this._pendingPattern = null; // queued pattern applied at next loop start
 
     this.drumEnabled = false;
 
@@ -102,6 +103,10 @@ class Sequencer {
     if (this._bassSynth) this._bassSynth.allNotesOff();
     this._highlightStep(-1);
     this.currentStep = -1;
+    if (this._pendingPattern) {
+      if (typeof this._pendingPattern.onCancel === 'function') this._pendingPattern.onCancel();
+      this._pendingPattern = null;
+    }
   }
 
   startRecord() {
@@ -118,6 +123,16 @@ class Sequencer {
 
   _tick() {
     this.currentStep = (this.currentStep + 1) % 16;
+
+    // Apply queued pattern at the top of a new loop
+    if (this.currentStep === 0 && this._pendingPattern) {
+      this._pendingPattern.steps.forEach((s, i) => {
+        this.steps[i].midi   = s.midi;
+        this.steps[i].active = s.active;
+      });
+      if (typeof this._pendingPattern.onApply === 'function') this._pendingPattern.onApply();
+      this._pendingPattern = null;
+    }
 
     if (this._metronomeOn && this.currentStep % 4 === 0) {
       this._playClick(this.currentStep === 0);
@@ -425,13 +440,31 @@ function _initPatternBank(seq, barId, saveBtnId) {
       } else {
         // ── LOAD ──
         if (!patterns[slot]) return;
-        patterns[slot].steps.forEach((saved, i) => {
-          seq.steps[i].midi   = saved.midi;
-          seq.steps[i].active = saved.active;
-          seq._updateStepUI(i);
-        });
-        slotBtns.forEach(b => b.classList.remove('loaded'));
-        btn.classList.add('loaded');
+
+        const applyPattern = () => {
+          patterns[slot].steps.forEach((saved, i) => {
+            seq.steps[i].midi   = saved.midi;
+            seq.steps[i].active = saved.active;
+            seq._updateStepUI(i);
+          });
+          slotBtns.forEach(b => b.classList.remove('loaded', 'pending'));
+          btn.classList.add('loaded');
+        };
+
+        if (seq.playing) {
+          // Queue for next loop boundary
+          slotBtns.forEach(b => b.classList.remove('pending'));
+          btn.classList.add('pending');
+          seq._pendingPattern = {
+            steps: patterns[slot].steps,
+            onApply:  applyPattern,
+            onCancel: () => {
+              slotBtns.forEach(b => b.classList.remove('pending'));
+            },
+          };
+        } else {
+          applyPattern();
+        }
       }
     });
   });
