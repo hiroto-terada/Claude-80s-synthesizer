@@ -365,3 +365,45 @@ function setLed(id, on) {
     tracking = false;
   }, { passive: true });
 })();
+
+// ── SEQ FX Drawer (right side) ────────────────────────────
+(function initSeqFxDrawer() {
+  const drawer      = document.getElementById('fx-drawer');
+  const backdrop    = document.getElementById('fx-backdrop');
+  const sliderDist  = document.getElementById('fx-dist');
+  const sliderComp  = document.getElementById('fx-comp');
+  const sliderDelay = document.getElementById('fx-delay');
+  const sliderReverb = document.getElementById('fx-reverb');
+
+  function openDrawer()  { drawer.classList.add('open');    backdrop.classList.add('open'); }
+  function closeDrawer() { drawer.classList.remove('open'); backdrop.classList.remove('open'); }
+  backdrop.addEventListener('click', closeDrawer);
+
+  sliderDist.addEventListener('input',  () => { if (bassSynth) bassSynth.setDistortion(parseFloat(sliderDist.value)); });
+  sliderComp.addEventListener('input',  () => { if (bassSynth) bassSynth.setCompressor(parseFloat(sliderComp.value)); });
+  sliderDelay.addEventListener('input', () => { if (bassSynth) bassSynth.setDelayTime(parseFloat(sliderDelay.value)); });
+  sliderReverb.addEventListener('input',() => { if (bassSynth) bassSynth.setReverbMix(parseFloat(sliderReverb.value)); });
+
+  // Open: swipe left starting from right edge; Close: swipe right inside open drawer
+  let tx0 = 0, ty0 = 0, tracking = false;
+  const EDGE_ZONE = 30;
+  const THRESHOLD = 60;
+
+  document.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    tx0 = t.clientX;
+    ty0 = t.clientY;
+    tracking = tx0 > window.innerWidth - EDGE_ZONE || drawer.classList.contains('open');
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!tracking) return;
+    const t  = e.changedTouches[0];
+    const dx = t.clientX - tx0;
+    const dy = Math.abs(t.clientY - ty0);
+    if (dy > Math.abs(dx)) return;
+    if (dx < -THRESHOLD && !drawer.classList.contains('open')) openDrawer();
+    else if (dx > THRESHOLD && drawer.classList.contains('open')) closeDrawer();
+    tracking = false;
+  }, { passive: true });
+})();

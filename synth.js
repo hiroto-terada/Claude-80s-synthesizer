@@ -192,7 +192,16 @@ class TB303Synth {
     this.distortion = ctx.createWaveShaper();
     this.distortion.curve = this._makeDistortionCurve(0);
     this.distortion.oversample = '4x';
-    this.distortion.connect(this.masterGain);
+
+    // Compressor (after distortion)
+    this.compressor = ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = 0;   // bypass by default
+    this.compressor.knee.value      = 40;
+    this.compressor.ratio.value     = 1;
+    this.compressor.attack.value    = 0.003;
+    this.compressor.release.value   = 0.25;
+    this.distortion.connect(this.compressor);
+    this.compressor.connect(this.masterGain);
 
     // Delay with feedback
     this.delayNode     = ctx.createDelay(2.0);
@@ -203,17 +212,17 @@ class TB303Synth {
     this.delaySend.gain.value = 0;
     this.delayWet      = ctx.createGain();
     this.delayWet.gain.value = 0;
-    this.distortion.connect(this.delaySend);
+    this.compressor.connect(this.delaySend);
     this.delaySend.connect(this.delayNode);
     this.delayNode.connect(this.delayFeedback);
     this.delayFeedback.connect(this.delayNode);
     this.delayNode.connect(this.delayWet);
     this.delayWet.connect(this.masterGain);
 
-    // Light reverb send
+    // Reverb send
     this.reverbSend = ctx.createGain();
     this.reverbSend.gain.value = 0.06;
-    this.distortion.connect(this.reverbSend);
+    this.compressor.connect(this.reverbSend);
     [0.04, 0.09, 0.16].forEach((t, i) => {
       const d = ctx.createDelay(0.5);
       d.delayTime.value = t;
@@ -228,13 +237,17 @@ class TB303Synth {
   }
 
   _makeDistortionCurve(amount) {
-    const n = 512;
+    const n = 256;
     const curve = new Float32Array(n);
+    if (amount === 0) {
+      for (let i = 0; i < n; i++) curve[i] = (i * 2) / n - 1;
+      return curve;
+    }
+    const k = 1 + amount * 19;
+    const norm = 1 / Math.tanh(k);
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / n - 1;
-      curve[i] = amount === 0
-        ? x
-        : ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+      curve[i] = Math.tanh(k * x) * norm;
     }
     return curve;
   }
@@ -291,7 +304,11 @@ class TB303Synth {
 
   setMasterVolume(v) { this.masterGain.gain.value = v; }
   setDistortion(v) {
-    this.distortion.curve = this._makeDistortionCurve(v * 400);
+    this.distortion.curve = this._makeDistortionCurve(v);
+  }
+  setCompressor(v) {
+    this.compressor.threshold.value = -v * 40;   // 0 → -40 dB
+    this.compressor.ratio.value     = 1 + v * 15; // 1 → 16
   }
   setDelayTime(v) {
     this.delayNode.delayTime.value = v;
@@ -302,6 +319,7 @@ class TB303Synth {
   setDelayFeedback(v) {
     this.delayFeedback.gain.value = Math.min(0.92, v);
   }
+  setReverbMix(v) { this.reverbSend.gain.value = v * 0.35; }
 }
 
 // ── Helpers ──────────────────────────────────────────────
