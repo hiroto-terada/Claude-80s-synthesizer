@@ -375,14 +375,26 @@ function initSequencer() {
 }
 
 // ── Pattern Bank (SEQ 1) ──────────────────────────────────
+const PATTERN_STORAGE_KEY = 'fm80-seq1-patterns';
+
 function _initPatternBank(seq, barId, saveBtnId) {
   const bar      = document.getElementById(barId);
   const saveBtn  = document.getElementById(saveBtnId);
   const slotBtns = bar.querySelectorAll('.seq-pattern-slot');
 
-  const patterns  = [null, null, null, null]; // {steps:[{midi,active}]}
-  let saveMode    = false;
-  let loadedSlot  = null; // currently active slot index (for visual)
+  // Load persisted patterns from localStorage (fallback to nulls)
+  let patterns = [null, null, null, null];
+  try {
+    const saved = JSON.parse(localStorage.getItem(PATTERN_STORAGE_KEY));
+    if (Array.isArray(saved) && saved.length === 4) patterns = saved;
+  } catch (_) {}
+
+  let saveMode = false;
+
+  // Reflect loaded state on slot buttons
+  slotBtns.forEach(btn => {
+    if (patterns[parseInt(btn.dataset.slot)]) btn.classList.add('filled');
+  });
 
   function enterSaveMode() {
     saveMode = true;
@@ -406,10 +418,9 @@ function _initPatternBank(seq, barId, saveBtnId) {
       if (saveMode) {
         // ── SAVE ──
         patterns[slot] = { steps: seq.steps.map(s => ({ midi: s.midi, active: s.active })) };
-        // Mark filled
+        try { localStorage.setItem(PATTERN_STORAGE_KEY, JSON.stringify(patterns)); } catch (_) {}
         slotBtns.forEach(b => b.classList.remove('loaded'));
         btn.classList.add('filled', 'loaded');
-        loadedSlot = slot;
         exitSaveMode();
       } else {
         // ── LOAD ──
@@ -421,7 +432,6 @@ function _initPatternBank(seq, barId, saveBtnId) {
         });
         slotBtns.forEach(b => b.classList.remove('loaded'));
         btn.classList.add('loaded');
-        loadedSlot = slot;
       }
     });
   });
