@@ -16,28 +16,34 @@ let synth     = null;
 let bassSynth = null;  // TB-303 bass for step sequencer
 let currentOctave = 4;
 let recMidi   = null;  // last MIDI note pressed (for record mode)
-let stepWriteMode     = false;
+let activeWriteSeq    = null;  // which sequencer is in step write mode (null = off)
 let selectedWriteStep = 0;
 
 function highlightWriteStep(idx) {
-  document.querySelectorAll('.seq-step').forEach((el, i) => {
-    el.classList.toggle('seq-write-current', i === idx);
-  });
+  // Clear all write highlights first
+  document.querySelectorAll('.seq-step').forEach(el => el.classList.remove('seq-write-current'));
+  if (idx < 0 || !activeWriteSeq) return;
+  const container = document.getElementById(activeWriteSeq._containerId);
+  if (!container) return;
+  const steps = container.querySelectorAll('.seq-step');
+  if (steps[idx]) steps[idx].classList.add('seq-write-current');
 }
 
 function assignWriteStep(midi) {
-  if (!sequencer) return;
-  sequencer.steps[selectedWriteStep].midi   = midi;
-  sequencer.steps[selectedWriteStep].active = true;
-  sequencer._updateStepUI(selectedWriteStep);
+  const seq = activeWriteSeq;
+  if (!seq) return;
+  seq.steps[selectedWriteStep].midi   = midi;
+  seq.steps[selectedWriteStep].active = true;
+  seq._updateStepUI(selectedWriteStep);
   selectedWriteStep = (selectedWriteStep + 1) % 16;
   highlightWriteStep(selectedWriteStep);
 }
 
 function restWriteStep() {
-  if (!sequencer) return;
-  sequencer.steps[selectedWriteStep].active = false;
-  sequencer._updateStepUI(selectedWriteStep);
+  const seq = activeWriteSeq;
+  if (!seq) return;
+  seq.steps[selectedWriteStep].active = false;
+  seq._updateStepUI(selectedWriteStep);
   selectedWriteStep = (selectedWriteStep + 1) % 16;
   highlightWriteStep(selectedWriteStep);
 }
@@ -71,6 +77,8 @@ document.getElementById('start-btn').addEventListener('click', () => {
   initKeyboardControls();
   initPCKeyboard();
   initSequencer();
+  initSequencer2();
+  initSeq2Toggle();
   initDrums();
 });
 
@@ -132,7 +140,7 @@ function addKeyHandlers(el, midi, label) {
     el.classList.add('active');
     synth.noteOn(midi);
     recMidi = midi; // update record buffer
-    if (stepWriteMode) assignWriteStep(midi);
+    if (activeWriteSeq) assignWriteStep(midi);
     document.getElementById('note-display').textContent = label;
     setLed('led-audio', true);
     setTimeout(() => setLed('led-audio', false), 120);
@@ -159,7 +167,7 @@ function initPCKeyboard() {
     const midi = noteNameToMidi(note + oct);
     synth.noteOn(midi);
     recMidi = midi; // update record buffer
-    if (stepWriteMode) assignWriteStep(midi);
+    if (activeWriteSeq) assignWriteStep(midi);
     const el = document.querySelector(`[data-midi="${midi}"]`);
     if (el) { el.classList.add('active'); document.getElementById('note-display').textContent = note + oct; }
   });
@@ -416,3 +424,13 @@ function setLed(id, on) {
     tracking = false;
   }, { passive: true });
 })();
+
+// ── SEQ 2 collapsible toggle ───────────────────────────────
+function initSeq2Toggle() {
+  const btn     = document.getElementById('seq2-toggle-btn');
+  const section = document.getElementById('seq2-section');
+  btn.addEventListener('click', () => {
+    const isOpen = section.classList.toggle('open');
+    btn.textContent = isOpen ? 'SEQ 2 ▲' : 'SEQ 2 ▼';
+  });
+}

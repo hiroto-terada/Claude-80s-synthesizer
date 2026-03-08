@@ -475,6 +475,45 @@ header {
   background: rgba(0,229,255,0.1);
 }
 
+/* ── SEQ 2 collapsible ── */
+#seq2-wrap {
+  margin: 0 8px;
+}
+
+#seq2-toggle-btn {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s, border-color 0.15s;
+}
+#seq2-toggle-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+#seq2-section {
+  display: none;
+  padding-top: 4px;
+}
+#seq2-section.open {
+  display: block;
+}
+
+#seq2-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  row-gap: 8px;
+}
+
 /* ── Start Overlay ── */
 #start-overlay {
   position: fixed; inset: 0;
