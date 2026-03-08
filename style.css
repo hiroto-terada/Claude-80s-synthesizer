@@ -385,6 +385,76 @@ header {
   outline: 2px solid #ffcc00;
   background: rgba(255,204,0,0.08);
 }
+
+/* ── Pattern Bank ── */
+.seq-pattern-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.seq-pattern-label {
+  font-size: 0.42rem;
+  letter-spacing: 2px;
+  color: var(--dim);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.seq-pattern-save-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.seq-pattern-save-btn:hover { border-color: #ffcc00; color: #ffcc00; }
+.seq-pattern-save-btn.active {
+  border-color: #ffcc00;
+  color: #ffcc00;
+  background: rgba(255,204,0,0.12);
+  box-shadow: 0 0 7px rgba(255,204,0,0.3);
+}
+
+.seq-pattern-slot {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  padding: 3px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.seq-pattern-slot.filled {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.seq-pattern-slot.filled:hover { background: rgba(0,229,255,0.08); }
+
+/* Save mode: all slots glow yellow */
+.seq-pattern-bar.save-mode .seq-pattern-slot {
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+.seq-pattern-bar.save-mode .seq-pattern-slot:hover {
+  background: rgba(255,204,0,0.12);
+}
+
+/* Currently active slot */
+.seq-pattern-slot.loaded {
+  background: rgba(0,229,255,0.12);
+}
 #seq-play-btn:hover, #seq2-play-btn:hover { background: rgba(0,229,255,0.1); }
 
 #seq-rec-btn.recording, #seq2-rec-btn.recording {
