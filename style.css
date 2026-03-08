@@ -603,13 +603,11 @@ header {
 .fx-section-title {
   font-size: 0.5rem;
   letter-spacing: 3px;
-  color: var(--cyan);
+  color: var(--accent);
   flex-shrink: 0;
 }
-
-.fx-section-title:nth-of-type(2) {
-  color: var(--pink);
-}
+.fx-section-title.fx-title-pink   { color: var(--pink); }
+.fx-section-title.fx-title-export { color: var(--led-on); }
 
 .fx-section-divider {
   width: 80%;
@@ -649,7 +647,7 @@ header {
 .fx-slider-label {
   font-size: 0.42rem;
   letter-spacing: 2px;
-  color: var(--cyan);
+  color: var(--accent);
   flex-shrink: 0;
 }
 
@@ -659,6 +657,59 @@ header {
   color: var(--border);
   text-align: center;
   flex-shrink: 0;
+}
+
+/* ── REC / EXPORT controls ── */
+.rec-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.rec-btn, .rec-dl-btn {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  padding: 6px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.rec-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+.rec-btn:hover   { border-color: var(--led-on); color: var(--led-on); }
+.rec-btn.active  {
+  border-color: var(--led-on);
+  color: var(--led-on);
+  box-shadow: 0 0 8px rgba(0,255,136,0.4);
+  animation: rec-blink 1s step-start infinite;
+}
+
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.rec-dl-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+.rec-dl-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.rec-status {
+  font-size: 0.42rem;
+  letter-spacing: 2px;
+  color: var(--dim);
+  min-height: 1em;
 }
 
 /* ── Drum Section ── */

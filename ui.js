@@ -84,6 +84,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   sequencer2._bassSynth = bassSynth2;
   initSeq2Toggle();
   initDrums();
+  initRecorder();
 });
 
 // ── Piano Keyboard ────────────────────────────────────────
@@ -385,6 +386,111 @@ function setLed(id, on) {
     tracking = false;
   }, { passive: true });
 })();
+
+// ── WAV Recorder ──────────────────────────────────────────
+// Captures all synth output in real time via ScriptProcessorNode.
+// Encoded as 16-bit PCM stereo WAV for DAW import.
+function initRecorder() {
+  const toggleBtn  = document.getElementById('rec-toggle-btn');
+  const statusEl   = document.getElementById('rec-status');
+  const downloadBtn = document.getElementById('rec-download-btn');
+
+  const BUF = 4096;
+  // ScriptProcessorNode captures mixed output of all synths.
+  // Input = sum of all masterGains connected to it.
+  // Output routed to a silent gain so onaudioprocess fires without doubling sound.
+  const recNode = audioCtx.createScriptProcessor(BUF, 2, 2);
+  const silence = audioCtx.createGain();
+  silence.gain.value = 0;
+  recNode.connect(silence);
+  silence.connect(audioCtx.destination);
+
+  [synth, bassSynth, bassSynth2, drumSynth].forEach(s => {
+    if (s && s.masterGain) s.masterGain.connect(recNode);
+  });
+
+  let recording  = false;
+  let chunksL    = [];
+  let chunksR    = [];
+  let recBlob    = null;
+
+  recNode.onaudioprocess = e => {
+    if (!recording) return;
+    chunksL.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    chunksR.push(new Float32Array(e.inputBuffer.getChannelData(1)));
+  };
+
+  toggleBtn.addEventListener('click', () => {
+    if (!recording) {
+      chunksL = [];
+      chunksR = [];
+      recBlob = null;
+      recording = true;
+      toggleBtn.textContent = '⏹ STOP';
+      toggleBtn.classList.add('active');
+      statusEl.textContent = 'REC...';
+      downloadBtn.style.display = 'none';
+    } else {
+      recording = false;
+      toggleBtn.textContent = '⏺ REC';
+      toggleBtn.classList.remove('active');
+
+      if (chunksL.length === 0) {
+        statusEl.textContent = '—';
+        return;
+      }
+
+      const totalSamples = chunksL.reduce((s, c) => s + c.length, 0);
+      const secs = (totalSamples / audioCtx.sampleRate).toFixed(1);
+      statusEl.textContent = `${secs}s ready`;
+
+      recBlob = new Blob([_encodeWAV(chunksL, chunksR, audioCtx.sampleRate)],
+                         { type: 'audio/wav' });
+      downloadBtn.style.display = '';
+    }
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!recBlob) return;
+    const url = URL.createObjectURL(recBlob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = `fm80-${Date.now()}.wav`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function _encodeWAV(chunksL, chunksR, sampleRate) {
+  const totalSamples = chunksL.reduce((s, c) => s + c.length, 0);
+  const numCh    = 2;
+  const bitDepth = 16;
+  const dataSize = totalSamples * numCh * (bitDepth / 8);
+  const buf = new ArrayBuffer(44 + dataSize);
+  const v   = new DataView(buf);
+
+  const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+  str(0,  'RIFF'); v.setUint32(4,  36 + dataSize, true);
+  str(8,  'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true);                           // PCM chunk size
+  v.setUint16(20, 1,  true);                           // PCM format
+  v.setUint16(22, numCh, true);
+  v.setUint32(24, sampleRate, true);
+  v.setUint32(28, sampleRate * numCh * (bitDepth / 8), true); // byte rate
+  v.setUint16(32, numCh * (bitDepth / 8), true);       // block align
+  v.setUint16(34, bitDepth, true);
+  str(36, 'data'); v.setUint32(40, dataSize, true);
+
+  let off = 44;
+  for (let c = 0; c < chunksL.length; c++) {
+    const L = chunksL[c], R = chunksR[c];
+    for (let i = 0; i < L.length; i++) {
+      v.setInt16(off, Math.max(-1, Math.min(1, L[i])) * 0x7FFF, true); off += 2;
+      v.setInt16(off, Math.max(-1, Math.min(1, R[i])) * 0x7FFF, true); off += 2;
+    }
+  }
+  return buf;
+}
 
 // ── SEQ 2 collapsible toggle ───────────────────────────────
 function initSeq2Toggle() {
