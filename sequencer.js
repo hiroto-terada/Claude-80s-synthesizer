@@ -371,6 +371,60 @@ function initSequencer() {
     bpmDownId:      'bpm-down',
     bpmUpId:        'bpm-up',
   });
+  _initPatternBank(sequencer, 'seq-pattern-bar', 'seq-pattern-save-btn');
+}
+
+// ── Pattern Bank (SEQ 1) ──────────────────────────────────
+function _initPatternBank(seq, barId, saveBtnId) {
+  const bar      = document.getElementById(barId);
+  const saveBtn  = document.getElementById(saveBtnId);
+  const slotBtns = bar.querySelectorAll('.seq-pattern-slot');
+
+  const patterns  = [null, null, null, null]; // {steps:[{midi,active}]}
+  let saveMode    = false;
+  let loadedSlot  = null; // currently active slot index (for visual)
+
+  function enterSaveMode() {
+    saveMode = true;
+    saveBtn.classList.add('active');
+    bar.classList.add('save-mode');
+  }
+  function exitSaveMode() {
+    saveMode = false;
+    saveBtn.classList.remove('active');
+    bar.classList.remove('save-mode');
+  }
+
+  saveBtn.addEventListener('click', () => {
+    saveMode ? exitSaveMode() : enterSaveMode();
+  });
+
+  slotBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slot = parseInt(btn.dataset.slot);
+
+      if (saveMode) {
+        // ── SAVE ──
+        patterns[slot] = { steps: seq.steps.map(s => ({ midi: s.midi, active: s.active })) };
+        // Mark filled
+        slotBtns.forEach(b => b.classList.remove('loaded'));
+        btn.classList.add('filled', 'loaded');
+        loadedSlot = slot;
+        exitSaveMode();
+      } else {
+        // ── LOAD ──
+        if (!patterns[slot]) return;
+        patterns[slot].steps.forEach((saved, i) => {
+          seq.steps[i].midi   = saved.midi;
+          seq.steps[i].active = saved.active;
+          seq._updateStepUI(i);
+        });
+        slotBtns.forEach(b => b.classList.remove('loaded'));
+        btn.classList.add('loaded');
+        loadedSlot = slot;
+      }
+    });
+  });
 }
 
 function initSequencer2() {
