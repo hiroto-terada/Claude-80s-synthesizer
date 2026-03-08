@@ -7,37 +7,29 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<!-- Swipe handle (always visible at left edge on mobile) -->
-<div id="vol-swipe-handle"></div>
-
-<!-- Volume Drawer -->
-<div id="vol-backdrop"></div>
-<div id="vol-drawer">
-  <div class="vol-drawer-title">VOLUME</div>
-  <div class="vol-slider-row">
-    <div class="vol-slider-wrap">
-      <input type="range" id="vol-synth" class="vol-slider" min="0" max="1" step="0.01" value="0.6">
-      <div class="vol-slider-label">SYNTH</div>
-    </div>
-    <div class="vol-slider-wrap">
-      <input type="range" id="vol-seq" class="vol-slider" min="0" max="1" step="0.01" value="0.55">
-      <div class="vol-slider-label">SEQ</div>
-    </div>
-    <div class="vol-slider-wrap">
-      <input type="range" id="vol-drum" class="vol-slider" min="0" max="1" step="0.01" value="0.7">
-      <div class="vol-slider-label">DRUM</div>
-    </div>
-  </div>
-  <div class="vol-drawer-hint">← スワイプで閉じる</div>
-</div>
-
 <!-- Swipe handle (right edge) -->
 <div id="fx-swipe-handle"></div>
 
-<!-- SEQ FX Drawer (right side) -->
+<!-- Right Drawer: Volume (top) + SEQ FX (bottom) -->
 <div id="fx-backdrop"></div>
 <div id="fx-drawer">
-  <div class="fx-drawer-title">SEQ FX</div>
+  <div class="fx-section-title">VOLUME</div>
+  <div class="fx-slider-row">
+    <div class="fx-slider-wrap">
+      <input type="range" id="vol-synth" class="fx-slider" min="0" max="1" step="0.01" value="0.6">
+      <div class="fx-slider-label">SYNTH</div>
+    </div>
+    <div class="fx-slider-wrap">
+      <input type="range" id="vol-seq" class="fx-slider" min="0" max="1" step="0.01" value="0.55">
+      <div class="fx-slider-label">SEQ</div>
+    </div>
+    <div class="fx-slider-wrap">
+      <input type="range" id="vol-drum" class="fx-slider" min="0" max="1" step="0.01" value="0.7">
+      <div class="fx-slider-label">DRUM</div>
+    </div>
+  </div>
+  <div class="fx-section-divider"></div>
+  <div class="fx-section-title">SEQ FX</div>
   <div class="fx-slider-row">
     <div class="fx-slider-wrap">
       <input type="range" id="fx-dist"  class="fx-slider" min="0" max="1"    step="0.01" value="0">
