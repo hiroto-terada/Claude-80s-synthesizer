@@ -332,7 +332,7 @@ header {
   gap: 5px;
 }
 
-#bpm-display {
+#bpm-display, #bpm2-display {
   font-size: 0.75rem;
   color: var(--accent);
   min-width: 28px;
@@ -346,7 +346,9 @@ header {
 }
 
 #seq-step-write-btn, #seq-rest-btn,
-#seq-rec-btn, #seq-play-btn {
+#seq-rec-btn, #seq-play-btn,
+#seq2-step-write-btn, #seq2-rest-btn,
+#seq2-rec-btn, #seq2-play-btn {
   background: transparent;
   border: 1px solid var(--accent);
   color: var(--accent);
@@ -358,20 +360,24 @@ header {
   cursor: pointer;
   transition: all 0.15s;
 }
-#seq-play-btn { margin-left: auto; }
-#seq-rec-btn  { margin-left: auto; }
+#seq-play-btn, #seq2-play-btn { margin-left: auto; }
+#seq-rec-btn,  #seq2-rec-btn  { margin-left: auto; }
 #seq-step-write-btn:hover,
 #seq-rest-btn:hover,
-#seq-rec-btn:hover  { background: rgba(0,229,255,0.1); }
+#seq-rec-btn:hover,
+#seq2-step-write-btn:hover,
+#seq2-rest-btn:hover,
+#seq2-rec-btn:hover { background: rgba(0,229,255,0.1); }
 
 /* Step Write モード: ボタンと選択ステップのハイライト */
-#seq-step-write-btn.active {
+#seq-step-write-btn.active,
+#seq2-step-write-btn.active {
   border-color: #ffcc00;
   color: #ffcc00;
   background: rgba(255,204,0,0.1);
   box-shadow: 0 0 8px rgba(255,204,0,0.3);
 }
-#seq-rest-btn {
+#seq-rest-btn, #seq2-rest-btn {
   border-color: #ffcc00;
   color: #ffcc00;
 }
@@ -379,9 +385,9 @@ header {
   outline: 2px solid #ffcc00;
   background: rgba(255,204,0,0.08);
 }
-#seq-play-btn:hover { background: rgba(0,229,255,0.1); }
+#seq-play-btn:hover, #seq2-play-btn:hover { background: rgba(0,229,255,0.1); }
 
-#seq-rec-btn.recording {
+#seq-rec-btn.recording, #seq2-rec-btn.recording {
   border-color: #ff3333;
   color: #ff3333;
   background: rgba(255,51,51,0.1);
@@ -392,7 +398,7 @@ header {
   50% { opacity: 0.5; }
 }
 
-#seq-play-btn.playing {
+#seq-play-btn.playing, #seq2-play-btn.playing {
   border-color: var(--pink);
   color: var(--pink);
   background: rgba(255,77,166,0.08);
