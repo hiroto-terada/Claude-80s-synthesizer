@@ -8,20 +8,48 @@ class DrumSynth {
     this.masterGain = ctx.createGain();
     this.masterGain.gain.value = 0.7;
     this.masterGain.connect(ctx.destination);
+    this._sidechainGains = []; // bass synth gains to duck on kick
+  }
+
+  // Call with [bassSynth.masterGain, bassSynth2.masterGain] to enable sidechain
+  setSidechain(gains) {
+    this._sidechainGains = gains;
   }
 
   playKick() {
     const ctx = this.ctx, now = ctx.currentTime;
+
+    // Sidechain: briefly duck bass synths so kick punches through
+    this._sidechainGains.forEach(g => {
+      const v = g.gain.value;
+      g.gain.setValueAtTime(v, now);
+      g.gain.linearRampToValueAtTime(v * 0.12, now + 0.006);
+      g.gain.linearRampToValueAtTime(v, now + 0.10);
+    });
+
+    // Sub body: 808-style pitch sweep
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.frequency.setValueAtTime(120, now);
-    osc.frequency.exponentialRampToValueAtTime(30, now + 0.35);
-    gain.gain.setValueAtTime(1.5, now);
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(35, now + 0.35);
+    gain.gain.setValueAtTime(2.0, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
     osc.connect(gain);
     gain.connect(this.masterGain);
     osc.start(now);
     osc.stop(now + 0.5);
+
+    // Click transient: high-freq burst gives attack presence in the mix
+    const click     = ctx.createOscillator();
+    const clickGain = ctx.createGain();
+    click.frequency.setValueAtTime(1400, now);
+    click.frequency.exponentialRampToValueAtTime(60, now + 0.02);
+    clickGain.gain.setValueAtTime(1.2, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+    click.connect(clickGain);
+    clickGain.connect(this.masterGain);
+    click.start(now);
+    click.stop(now + 0.025);
   }
 
   playSnare() {

@@ -84,6 +84,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   sequencer2._bassSynth = bassSynth2;
   initSeq2Toggle();
   initDrums();
+  drumSynth.setSidechain([bassSynth.masterGain, bassSynth2.masterGain]);
   initRecorder();
 });
 
