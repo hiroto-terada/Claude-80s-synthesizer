@@ -391,9 +391,8 @@ function initSequencer() {
 
 // ── Pattern Bank ──────────────────────────────────────────
 function _initPatternBank(seq, barId, saveBtnId, storageKey) {
-  const bar      = document.getElementById(barId);
-  const saveBtn  = document.getElementById(saveBtnId);
-  const slotBtns = bar.querySelectorAll('.seq-pattern-slot');
+  const bar     = document.getElementById(barId);
+  const saveBtn = document.getElementById(saveBtnId);
 
   // Load persisted patterns from localStorage (fallback to nulls)
   let patterns = Array(8).fill(null);
@@ -404,8 +403,10 @@ function _initPatternBank(seq, barId, saveBtnId, storageKey) {
 
   let saveMode = false;
 
+  function getSlotBtns() { return bar.querySelectorAll('.seq-pattern-slot'); }
+
   // Reflect loaded state on slot buttons
-  slotBtns.forEach(btn => {
+  getSlotBtns().forEach(btn => {
     if (patterns[parseInt(btn.dataset.slot)]) btn.classList.add('filled');
   });
 
@@ -420,51 +421,55 @@ function _initPatternBank(seq, barId, saveBtnId, storageKey) {
     bar.classList.remove('save-mode');
   }
 
-  saveBtn.addEventListener('click', () => {
-    saveMode ? exitSaveMode() : enterSaveMode();
-  });
+  // Use event delegation on bar so it works even when section starts hidden
+  bar.addEventListener('click', e => {
+    // SAVE button
+    if (e.target === saveBtn) {
+      saveMode ? exitSaveMode() : enterSaveMode();
+      return;
+    }
 
-  slotBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const slot = parseInt(btn.dataset.slot);
+    // Slot button (use closest to handle any inner elements)
+    const slotBtn = e.target.closest('.seq-pattern-slot');
+    if (!slotBtn) return;
 
-      if (saveMode) {
-        // ── SAVE ──
-        patterns[slot] = { steps: seq.steps.map(s => ({ midi: s.midi, active: s.active })) };
-        try { localStorage.setItem(storageKey, JSON.stringify(patterns)); } catch (_) {}
-        slotBtns.forEach(b => b.classList.remove('loaded'));
-        btn.classList.add('filled', 'loaded');
-        exitSaveMode();
-      } else {
-        // ── LOAD ──
-        if (!patterns[slot]) return;
+    const slot     = parseInt(slotBtn.dataset.slot);
+    const slotBtns = getSlotBtns();
 
-        const applyPattern = () => {
-          patterns[slot].steps.forEach((saved, i) => {
-            seq.steps[i].midi   = saved.midi;
-            seq.steps[i].active = saved.active;
-            seq._updateStepUI(i);
-          });
-          slotBtns.forEach(b => b.classList.remove('loaded', 'pending'));
-          btn.classList.add('loaded');
+    if (saveMode) {
+      // ── SAVE ──
+      patterns[slot] = { steps: seq.steps.map(s => ({ midi: s.midi, active: s.active })) };
+      try { localStorage.setItem(storageKey, JSON.stringify(patterns)); } catch (_) {}
+      slotBtns.forEach(b => b.classList.remove('loaded'));
+      slotBtn.classList.add('filled', 'loaded');
+      exitSaveMode();
+    } else {
+      // ── LOAD ──
+      if (!patterns[slot]) return;
+
+      const applyPattern = () => {
+        patterns[slot].steps.forEach((saved, i) => {
+          seq.steps[i].midi   = saved.midi;
+          seq.steps[i].active = saved.active;
+          seq._updateStepUI(i);
+        });
+        slotBtns.forEach(b => b.classList.remove('loaded', 'pending'));
+        slotBtn.classList.add('loaded');
+      };
+
+      if (seq.playing) {
+        // Queue for next loop boundary
+        slotBtns.forEach(b => b.classList.remove('pending'));
+        slotBtn.classList.add('pending');
+        seq._pendingPattern = {
+          steps: patterns[slot].steps,
+          onApply:  applyPattern,
+          onCancel: () => { getSlotBtns().forEach(b => b.classList.remove('pending')); },
         };
-
-        if (seq.playing) {
-          // Queue for next loop boundary
-          slotBtns.forEach(b => b.classList.remove('pending'));
-          btn.classList.add('pending');
-          seq._pendingPattern = {
-            steps: patterns[slot].steps,
-            onApply:  applyPattern,
-            onCancel: () => {
-              slotBtns.forEach(b => b.classList.remove('pending'));
-            },
-          };
-        } else {
-          applyPattern();
-        }
+      } else {
+        applyPattern();
       }
-    });
+    }
   });
 }
 
