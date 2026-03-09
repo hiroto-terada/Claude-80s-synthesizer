@@ -390,17 +390,9 @@ header {
 .seq-pattern-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-top: 10px;
-  flex-wrap: wrap;
-}
-
-.seq-pattern-label {
-  font-size: 0.42rem;
-  letter-spacing: 2px;
-  color: var(--dim);
-  margin-right: 2px;
-  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .seq-pattern-save-btn {
@@ -408,12 +400,13 @@ header {
   border: 1px solid var(--border);
   color: var(--dim);
   font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 2px;
-  padding: 3px 8px;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  padding: 3px 6px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 .seq-pattern-save-btn:hover { border-color: #ffcc00; color: #ffcc00; }
 .seq-pattern-save-btn.active {
@@ -428,13 +421,14 @@ header {
   border: 1px solid var(--border);
   color: var(--dim);
   font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 1px;
-  padding: 3px 10px;
+  font-size: 0.5rem;
+  letter-spacing: 0;
+  padding: 3px 0;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s;
-  position: relative;
+  flex: 1;
+  text-align: center;
 }
 .seq-pattern-slot.filled {
   border-color: var(--accent);
