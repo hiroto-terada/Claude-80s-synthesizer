@@ -386,13 +386,11 @@ function initSequencer() {
     bpmDownId:      'bpm-down',
     bpmUpId:        'bpm-up',
   });
-  _initPatternBank(sequencer, 'seq-pattern-bar', 'seq-pattern-save-btn');
+  _initPatternBank(sequencer, 'seq-pattern-bar', 'seq-pattern-save-btn', 'fm80-seq1-patterns');
 }
 
-// ── Pattern Bank (SEQ 1) ──────────────────────────────────
-const PATTERN_STORAGE_KEY = 'fm80-seq1-patterns';
-
-function _initPatternBank(seq, barId, saveBtnId) {
+// ── Pattern Bank ──────────────────────────────────────────
+function _initPatternBank(seq, barId, saveBtnId, storageKey) {
   const bar      = document.getElementById(barId);
   const saveBtn  = document.getElementById(saveBtnId);
   const slotBtns = bar.querySelectorAll('.seq-pattern-slot');
@@ -400,7 +398,7 @@ function _initPatternBank(seq, barId, saveBtnId) {
   // Load persisted patterns from localStorage (fallback to nulls)
   let patterns = Array(8).fill(null);
   try {
-    const saved = JSON.parse(localStorage.getItem(PATTERN_STORAGE_KEY));
+    const saved = JSON.parse(localStorage.getItem(storageKey));
     if (Array.isArray(saved) && saved.length === 8) patterns = saved;
   } catch (_) {}
 
@@ -433,7 +431,7 @@ function _initPatternBank(seq, barId, saveBtnId) {
       if (saveMode) {
         // ── SAVE ──
         patterns[slot] = { steps: seq.steps.map(s => ({ midi: s.midi, active: s.active })) };
-        try { localStorage.setItem(PATTERN_STORAGE_KEY, JSON.stringify(patterns)); } catch (_) {}
+        try { localStorage.setItem(storageKey, JSON.stringify(patterns)); } catch (_) {}
         slotBtns.forEach(b => b.classList.remove('loaded'));
         btn.classList.add('filled', 'loaded');
         exitSaveMode();
@@ -482,4 +480,5 @@ function initSequencer2() {
     bpmDownId:      'bpm2-down',
     bpmUpId:        'bpm2-up',
   });
+  _initPatternBank(sequencer2, 'seq2-pattern-bar', 'seq2-pattern-save-btn', 'fm80-seq2-patterns');
 }
