@@ -398,10 +398,10 @@ function _initPatternBank(seq, barId, saveBtnId) {
   const slotBtns = bar.querySelectorAll('.seq-pattern-slot');
 
   // Load persisted patterns from localStorage (fallback to nulls)
-  let patterns = [null, null, null, null];
+  let patterns = Array(8).fill(null);
   try {
     const saved = JSON.parse(localStorage.getItem(PATTERN_STORAGE_KEY));
-    if (Array.isArray(saved) && saved.length === 4) patterns = saved;
+    if (Array.isArray(saved) && saved.length === 8) patterns = saved;
   } catch (_) {}
 
   let saveMode = false;
