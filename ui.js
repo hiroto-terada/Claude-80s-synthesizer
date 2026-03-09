@@ -334,7 +334,8 @@ function setLed(id, on) {
   const drawer       = document.getElementById('fx-drawer');
   const backdrop     = document.getElementById('fx-backdrop');
   const sliderSynth  = document.getElementById('vol-synth');
-  const sliderSeq    = document.getElementById('vol-seq');
+  const sliderSeq1   = document.getElementById('vol-seq1');
+  const sliderSeq2   = document.getElementById('vol-seq2');
   const sliderDrum   = document.getElementById('vol-drum');
   const sliderDist   = document.getElementById('fx-dist');
   const sliderComp   = document.getElementById('fx-comp');
@@ -349,10 +350,11 @@ function setLed(id, on) {
   sliderSynth.addEventListener('input', () => {
     if (synth) synth.setMasterVolume(parseFloat(sliderSynth.value));
   });
-  sliderSeq.addEventListener('input', () => {
-    const v = parseFloat(sliderSeq.value);
-    if (bassSynth)  bassSynth.setMasterVolume(v);
-    if (bassSynth2) bassSynth2.setMasterVolume(v);
+  sliderSeq1.addEventListener('input', () => {
+    if (bassSynth) bassSynth.setMasterVolume(parseFloat(sliderSeq1.value));
+  });
+  sliderSeq2.addEventListener('input', () => {
+    if (bassSynth2) bassSynth2.setMasterVolume(parseFloat(sliderSeq2.value));
   });
   sliderDrum.addEventListener('input', () => {
     if (drumSynth) drumSynth.setMasterVolume(parseFloat(sliderDrum.value));

@@ -693,7 +693,7 @@ header {
 
 .fx-slider-row {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   flex: 1;
   align-items: stretch;
   min-height: 0;
