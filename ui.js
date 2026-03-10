@@ -82,6 +82,9 @@ document.getElementById('start-btn').addEventListener('click', () => {
   sequencer._bassSynth = bassSynth;
   initSequencer2();
   sequencer2._bassSynth = bassSynth2;
+  // Link pattern banks: loading slot N on either bar also loads the same slot on the other
+  patternBank1.setPeer(patternBank2);
+  patternBank2.setPeer(patternBank1);
   initSeq2Toggle();
   initDrums();
   drumSynth.setSidechain([bassSynth.masterGain, bassSynth2.masterGain]);

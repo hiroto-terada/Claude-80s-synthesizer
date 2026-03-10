@@ -374,6 +374,9 @@ function _buildSeqUI(seq, opts) {
   });
 }
 
+let patternBank1 = null; // controller returned by _initPatternBank for SEQ 1
+let patternBank2 = null; // controller returned by _initPatternBank for SEQ 2
+
 function initSequencer() {
   sequencer = new Sequencer({ containerId: 'seq-steps', prefix: 'seq', defaultMidi: 47 });
   _buildSeqUI(sequencer, {
@@ -386,7 +389,7 @@ function initSequencer() {
     bpmDownId:      'bpm-down',
     bpmUpId:        'bpm-up',
   });
-  _initPatternBank(sequencer, 'seq-pattern-bar', 'seq-pattern-save-btn', 'fm80-seq1-patterns');
+  patternBank1 = _initPatternBank(sequencer, 'seq-pattern-bar', 'seq-pattern-save-btn', 'fm80-seq1-patterns');
 }
 
 // ── Pattern Bank ──────────────────────────────────────────
@@ -402,6 +405,7 @@ function _initPatternBank(seq, barId, saveBtnId, storageKey) {
   } catch (_) {}
 
   let saveMode = false;
+  let peer = null; // linked pattern bank (set after both banks are created)
 
   function getSlotBtns() { return bar.querySelectorAll('.seq-pattern-slot'); }
 
@@ -421,6 +425,35 @@ function _initPatternBank(seq, barId, saveBtnId, storageKey) {
     bar.classList.remove('save-mode');
   }
 
+  // Load a slot on this bank (also called by peer for linked switching)
+  function doLoad(slot) {
+    if (!patterns[slot]) return;
+    const slotBtns = getSlotBtns();
+    const slotBtn  = bar.querySelector(`.seq-pattern-slot[data-slot="${slot}"]`);
+
+    const applyPattern = () => {
+      patterns[slot].steps.forEach((saved, i) => {
+        seq.steps[i].midi   = saved.midi;
+        seq.steps[i].active = saved.active;
+        seq._updateStepUI(i);
+      });
+      slotBtns.forEach(b => b.classList.remove('loaded', 'pending'));
+      if (slotBtn) slotBtn.classList.add('loaded');
+    };
+
+    if (seq.playing) {
+      slotBtns.forEach(b => b.classList.remove('pending'));
+      if (slotBtn) slotBtn.classList.add('pending');
+      seq._pendingPattern = {
+        steps: patterns[slot].steps,
+        onApply:  applyPattern,
+        onCancel: () => { getSlotBtns().forEach(b => b.classList.remove('pending')); },
+      };
+    } else {
+      applyPattern();
+    }
+  }
+
   // Use event delegation on bar so it works even when section starts hidden
   bar.addEventListener('click', e => {
     // SAVE button
@@ -437,40 +470,23 @@ function _initPatternBank(seq, barId, saveBtnId, storageKey) {
     const slotBtns = getSlotBtns();
 
     if (saveMode) {
-      // ── SAVE ──
+      // ── SAVE (independent per sequencer) ──
       patterns[slot] = { steps: seq.steps.map(s => ({ midi: s.midi, active: s.active })) };
       try { localStorage.setItem(storageKey, JSON.stringify(patterns)); } catch (_) {}
       slotBtns.forEach(b => b.classList.remove('loaded'));
       slotBtn.classList.add('filled', 'loaded');
       exitSaveMode();
     } else {
-      // ── LOAD ──
-      if (!patterns[slot]) return;
-
-      const applyPattern = () => {
-        patterns[slot].steps.forEach((saved, i) => {
-          seq.steps[i].midi   = saved.midi;
-          seq.steps[i].active = saved.active;
-          seq._updateStepUI(i);
-        });
-        slotBtns.forEach(b => b.classList.remove('loaded', 'pending'));
-        slotBtn.classList.add('loaded');
-      };
-
-      if (seq.playing) {
-        // Queue for next loop boundary
-        slotBtns.forEach(b => b.classList.remove('pending'));
-        slotBtn.classList.add('pending');
-        seq._pendingPattern = {
-          steps: patterns[slot].steps,
-          onApply:  applyPattern,
-          onCancel: () => { getSlotBtns().forEach(b => b.classList.remove('pending')); },
-        };
-      } else {
-        applyPattern();
-      }
+      // ── LOAD (linked: switch peer bank to same slot) ──
+      doLoad(slot);
+      if (peer) peer.doLoad(slot);
     }
   });
+
+  return {
+    doLoad,
+    setPeer(p) { peer = p; },
+  };
 }
 
 function initSequencer2() {
@@ -485,5 +501,5 @@ function initSequencer2() {
     bpmDownId:      'bpm2-down',
     bpmUpId:        'bpm2-up',
   });
-  _initPatternBank(sequencer2, 'seq2-pattern-bar', 'seq2-pattern-save-btn', 'fm80-seq2-patterns');
+  patternBank2 = _initPatternBank(sequencer2, 'seq2-pattern-bar', 'seq2-pattern-save-btn', 'fm80-seq2-patterns');
 }
