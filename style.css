@@ -595,6 +595,146 @@ header {
   row-gap: 8px;
 }
 
+/* ── Chord sequencer collapsible ── */
+#chord-wrap {
+  margin: 0 8px;
+}
+
+#chord-toggle-btn {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s, border-color 0.15s;
+}
+#chord-toggle-btn:hover {
+  color: var(--pink);
+  border-color: var(--pink);
+}
+
+#chord-section {
+  display: none;
+  padding-top: 4px;
+}
+#chord-section.open {
+  display: block;
+}
+
+/* Controls row: type bar + octave */
+.chord-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 6px;
+}
+
+.chord-type-bar {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.chord-type-btn {
+  background: var(--knob);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.chord-type-btn:hover  { border-color: var(--pink); color: var(--pink); }
+.chord-type-btn.active {
+  background: rgba(255,77,166,0.15);
+  border-color: var(--pink);
+  color: var(--pink);
+}
+
+.chord-oct-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 0.55rem;
+  color: var(--dim);
+}
+
+/* Chord palette (12 root buttons) */
+#chord-palette {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.chord-root-btn {
+  background: var(--knob);
+  border: 1px solid var(--border);
+  color: var(--txt);
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  padding: 6px 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, border-color 0.1s;
+}
+.chord-root-btn:active {
+  background: rgba(255,77,166,0.25);
+  border-color: var(--pink);
+}
+.chord-root-btn.black {
+  background: #0d0d18;
+  color: var(--dim);
+}
+.chord-root-btn.black:active {
+  background: rgba(255,77,166,0.18);
+  border-color: var(--pink);
+}
+
+/* Chord step grid */
+#chord-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  row-gap: 8px;
+  margin-bottom: 6px;
+}
+
+.chord-step {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 4px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 62px;
+  transition: border-color 0.1s, background 0.1s;
+}
+.chord-step.seq-on    { border-color: var(--pink); background: rgba(255,77,166,0.07); }
+.chord-step.seq-current { border-color: var(--accent) !important; box-shadow: 0 0 6px rgba(0,229,255,0.35); }
+.chord-step.seq-write-current { border-color: #ffd700 !important; box-shadow: 0 0 5px rgba(255,215,0,0.4); }
+
+.chord-step-name {
+  font-size: 0.55rem;
+  color: var(--pink);
+  letter-spacing: 1px;
+  min-height: 14px;
+}
+
 /* ── Start Overlay ── */
 #start-overlay {
   position: fixed; inset: 0;
