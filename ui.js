@@ -11,10 +11,11 @@ window.addEventListener('touchmove',   _noZoom, { passive: false, capture: true 
 window.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false, capture: true });
 window.addEventListener('gesturechange', e => e.preventDefault(), { passive: false, capture: true });
 
-let audioCtx  = null;
-let synth     = null;
+let audioCtx   = null;
+let synth      = null;
 let bassSynth  = null;  // TB-303 bass for step sequencer 1
 let bassSynth2 = null;  // TB-303 bass for step sequencer 2
+let chordSynth = null;  // FM synth for chord sequencer
 let currentOctave = 4;
 let recMidi   = null;  // last MIDI note pressed (for record mode)
 let activeWriteSeq    = null;  // which sequencer is in step write mode (null = off)
@@ -68,6 +69,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   synth      = new FMSynth(audioCtx);
   bassSynth  = new TB303Synth(audioCtx);
   bassSynth2 = new TB303Synth(audioCtx);
+  chordSynth = new FMSynth(audioCtx);
   drumSynth  = new DrumSynth(audioCtx);
 
   document.getElementById('start-overlay').style.display = 'none';
@@ -82,9 +84,34 @@ document.getElementById('start-btn').addEventListener('click', () => {
   sequencer._bassSynth = bassSynth;
   initSequencer2();
   sequencer2._bassSynth = bassSynth2;
-  // Link pattern banks: loading slot N on either bar also loads the same slot on the other
-  patternBank1.setPeer(patternBank2);
-  patternBank2.setPeer(patternBank1);
+  initChordSection();
+  chordSeq._synth   = chordSynth;
+  // Chord PLAY button wires into the same all-sequencer start/stop as SEQ1/SEQ2
+  const chordPlayBtn = document.getElementById('chord-play-btn');
+  chordSeq._playBtn  = chordPlayBtn;
+  chordPlayBtn.addEventListener('click', () => {
+    const all = [sequencer, sequencer2, chordSeq].filter(Boolean);
+    const anyPlaying = all.some(s => s.playing);
+    if (anyPlaying) {
+      all.forEach(s => s.stop());
+      all.forEach(s => {
+        if (s._playBtn) { s._playBtn.textContent = '▶ PLAY'; s._playBtn.classList.remove('playing'); }
+        if (s._recBtn)  { s._recBtn.classList.remove('recording'); s._recBtn.textContent = '⏺ REC'; }
+      });
+    } else {
+      all.forEach(s => s.play());
+      all.forEach(s => {
+        if (s._playBtn) { s._playBtn.textContent = '■ STOP'; s._playBtn.classList.add('playing'); }
+      });
+    }
+  });
+  // Link all three pattern banks: loading slot N on any bar loads it on all
+  patternBank1.addPeer(patternBank2);
+  patternBank1.addPeer(chordPatternBank);
+  patternBank2.addPeer(patternBank1);
+  patternBank2.addPeer(chordPatternBank);
+  chordPatternBank.addPeer(patternBank1);
+  chordPatternBank.addPeer(patternBank2);
   initSeq2Toggle();
   initDrums();
   drumSynth.setSidechain([bassSynth.masterGain, bassSynth2.masterGain]);
@@ -339,6 +366,7 @@ function setLed(id, on) {
   const sliderSynth  = document.getElementById('vol-synth');
   const sliderSeq1   = document.getElementById('vol-seq1');
   const sliderSeq2   = document.getElementById('vol-seq2');
+  const sliderChord  = document.getElementById('vol-chord');
   const sliderDrum   = document.getElementById('vol-drum');
   const sliderDist   = document.getElementById('fx-dist');
   const sliderComp   = document.getElementById('fx-comp');
@@ -358,6 +386,9 @@ function setLed(id, on) {
   });
   sliderSeq2.addEventListener('input', () => {
     if (bassSynth2) bassSynth2.setMasterVolume(parseFloat(sliderSeq2.value));
+  });
+  sliderChord.addEventListener('input', () => {
+    if (chordSynth) chordSynth.setMasterVolume(parseFloat(sliderChord.value));
   });
   sliderDrum.addEventListener('input', () => {
     if (drumSynth) drumSynth.setMasterVolume(parseFloat(sliderDrum.value));
@@ -411,7 +442,7 @@ function initRecorder() {
   recNode.connect(silence);
   silence.connect(audioCtx.destination);
 
-  [synth, bassSynth, bassSynth2, drumSynth].forEach(s => {
+  [synth, bassSynth, bassSynth2, chordSynth, drumSynth].forEach(s => {
     if (s && s.masterGain) s.masterGain.connect(recNode);
   });
 

@@ -317,7 +317,8 @@ function _buildSeqUI(seq, opts) {
   seq._recBtn  = recBtn;
 
   function setAllPlayBtnState(playing) {
-    [sequencer, sequencer2].forEach(s => {
+    const all = [sequencer, sequencer2, (typeof chordSeq !== 'undefined' ? chordSeq : null)];
+    all.forEach(s => {
       if (!s || !s._playBtn) return;
       s._playBtn.textContent = playing ? '■ STOP' : '▶ PLAY';
       s._playBtn.classList.toggle('playing', playing);
@@ -341,25 +342,26 @@ function _buildSeqUI(seq, opts) {
     seq.startRecord();
   });
 
-  // PLAY / STOP — both sequencers start/stop together
+  // PLAY / STOP — all sequencers (SEQ1, SEQ2, CHORD) start/stop together
   playBtn.addEventListener('click', () => {
     if (!bassSynth) return;
+    const all = [sequencer, sequencer2, (typeof chordSeq !== 'undefined' ? chordSeq : null)].filter(Boolean);
     if (seq.playing) {
-      [sequencer, sequencer2].forEach(s => {
-        if (!s) return;
+      all.forEach(s => {
         s.stop();
         if (s._recBtn) { s._recBtn.classList.remove('recording'); s._recBtn.textContent = '⏺ REC'; }
       });
       setAllPlayBtnState(false);
     } else {
-      [sequencer, sequencer2].forEach(s => { if (s) s.play(); });
+      all.forEach(s => s.play());
       setAllPlayBtnState(true);
     }
   });
 
-  // BPM controls (both sequencers stay in sync)
+  // BPM controls — all sequencers stay in sync
   function applyBpm(newBpm) {
-    [sequencer, sequencer2].forEach(s => { if (s) s.bpm = newBpm; });
+    const all = [sequencer, sequencer2, (typeof chordSeq !== 'undefined' ? chordSeq : null)];
+    all.forEach(s => { if (s) s.bpm = newBpm; });
     ['bpm-display', 'bpm2-display'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = newBpm;
@@ -405,7 +407,7 @@ function _initPatternBank(seq, barId, saveBtnId, storageKey) {
   } catch (_) {}
 
   let saveMode = false;
-  let peer = null; // linked pattern bank (set after both banks are created)
+  let peers = []; // linked pattern banks (set after all banks are created)
 
   function getSlotBtns() { return bar.querySelectorAll('.seq-pattern-slot'); }
 
@@ -477,15 +479,15 @@ function _initPatternBank(seq, barId, saveBtnId, storageKey) {
       slotBtn.classList.add('filled', 'loaded');
       exitSaveMode();
     } else {
-      // ── LOAD (linked: switch peer bank to same slot) ──
+      // ── LOAD (linked: switch peer banks to same slot) ──
       doLoad(slot);
-      if (peer) peer.doLoad(slot);
+      peers.forEach(p => p.doLoad(slot));
     }
   });
 
   return {
     doLoad,
-    setPeer(p) { peer = p; },
+    addPeer(p) { peers.push(p); },
   };
 }
 

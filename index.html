@@ -28,6 +28,10 @@
       <div class="fx-slider-label">SEQ2</div>
     </div>
     <div class="fx-slider-wrap">
+      <input type="range" id="vol-chord" class="fx-slider" min="0" max="1" step="0.01" value="0.5">
+      <div class="fx-slider-label">CHORD</div>
+    </div>
+    <div class="fx-slider-wrap">
       <input type="range" id="vol-drum" class="fx-slider" min="0" max="1" step="0.01" value="0.7">
       <div class="fx-slider-label">DRUM</div>
     </div>
@@ -192,6 +196,61 @@
     </div>
   </section>
 
+  <!-- CHORD collapsible -->
+  <div id="chord-wrap">
+    <button id="chord-toggle-btn">CHORD ▼</button>
+    <section id="chord-section">
+      <div class="chord-controls-row">
+        <div class="chord-type-bar">
+          <button class="chord-type-btn active" data-type="maj">MAJ</button>
+          <button class="chord-type-btn" data-type="min">MIN</button>
+          <button class="chord-type-btn" data-type="7">7th</button>
+          <button class="chord-type-btn" data-type="m7">m7</button>
+          <button class="chord-type-btn" data-type="maj7">M7</button>
+          <button class="chord-type-btn" data-type="dim">DIM</button>
+          <button class="chord-type-btn" data-type="sus4">SUS</button>
+        </div>
+        <div class="chord-oct-ctrl">
+          <button class="ctrl-btn" id="chord-oct-down">−</button>
+          <span id="chord-oct-display">OCT 4</span>
+          <button class="ctrl-btn" id="chord-oct-up">+</button>
+        </div>
+      </div>
+      <div id="chord-palette">
+        <button class="chord-root-btn" data-semitone="0">C</button>
+        <button class="chord-root-btn black" data-semitone="1">C#</button>
+        <button class="chord-root-btn" data-semitone="2">D</button>
+        <button class="chord-root-btn black" data-semitone="3">Eb</button>
+        <button class="chord-root-btn" data-semitone="4">E</button>
+        <button class="chord-root-btn" data-semitone="5">F</button>
+        <button class="chord-root-btn black" data-semitone="6">F#</button>
+        <button class="chord-root-btn" data-semitone="7">G</button>
+        <button class="chord-root-btn black" data-semitone="8">Ab</button>
+        <button class="chord-root-btn" data-semitone="9">A</button>
+        <button class="chord-root-btn black" data-semitone="10">Bb</button>
+        <button class="chord-root-btn" data-semitone="11">B</button>
+      </div>
+      <div class="seq-header">
+        <span class="seq-title">CHORD SEQ</span>
+        <button id="chord-step-write-btn">STEP</button>
+        <button id="chord-rest-btn" style="display:none">REST →</button>
+        <button id="chord-play-btn">▶ PLAY</button>
+      </div>
+      <div id="chord-steps"></div>
+      <div class="seq-pattern-bar" id="chord-pattern-bar">
+        <button class="seq-pattern-save-btn" id="chord-pattern-save-btn">SAVE</button>
+        <button class="seq-pattern-slot" data-slot="0">P1</button>
+        <button class="seq-pattern-slot" data-slot="1">P2</button>
+        <button class="seq-pattern-slot" data-slot="2">P3</button>
+        <button class="seq-pattern-slot" data-slot="3">P4</button>
+        <button class="seq-pattern-slot" data-slot="4">P5</button>
+        <button class="seq-pattern-slot" data-slot="5">P6</button>
+        <button class="seq-pattern-slot" data-slot="6">P7</button>
+        <button class="seq-pattern-slot" data-slot="7">P8</button>
+      </div>
+    </section>
+  </div>
+
   <!-- SEQ 2 collapsible -->
   <div id="seq2-wrap">
     <button id="seq2-toggle-btn">SEQ 2 ▼</button>
@@ -260,6 +319,7 @@
 
 <script src="synth.js"></script>
 <script src="sequencer.js"></script>
+<script src="chord.js"></script>
 <script src="drum.js"></script>
 <script src="ui.js"></script>
 </body>
