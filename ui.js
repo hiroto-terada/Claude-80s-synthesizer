@@ -70,6 +70,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   bassSynth  = new TB303Synth(audioCtx);
   bassSynth2 = new TB303Synth(audioCtx);
   chordSynth = new FMSynth(audioCtx);
+  chordSynth.setPatch('STRINGS');
   drumSynth  = new DrumSynth(audioCtx);
 
   document.getElementById('start-overlay').style.display = 'none';

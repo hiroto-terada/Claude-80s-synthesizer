@@ -86,18 +86,19 @@ class ChordSequencer {
 
     const step = this.steps[this.currentStep];
     if (this._synth) {
-      this._offAll();
       if (step.active && step.chord) {
         const midis = chordMidis(step.chord.root, step.chord.type);
-        midis.forEach(m => this._synth.noteOn(m));
-        this._playingMidis = [...midis];
-        const toOff = [...midis];
-        setTimeout(() => {
-          if (this._synth) {
-            toOff.forEach(m => this._synth.noteOff(m));
-            this._playingMidis = this._playingMidis.filter(m => !toOff.includes(m));
-          }
-        }, this.stepMs * 0.85);
+        // Keep playing if exact same chord — no retrigger, no stutter
+        const same = midis.length === this._playingMidis.length &&
+                     midis.every((m, i) => m === this._playingMidis[i]);
+        if (!same) {
+          this._offAll();
+          midis.forEach(m => this._synth.noteOn(m));
+          this._playingMidis = [...midis];
+        }
+      } else {
+        // Inactive / empty step — cut notes
+        this._offAll();
       }
     }
 
@@ -248,7 +249,7 @@ function _playChordPreview(root, typeId) {
   if (!chordSeq || !chordSeq._synth) return;
   const midis = chordMidis(root, typeId);
   midis.forEach(m => chordSeq._synth.noteOn(m));
-  setTimeout(() => midis.forEach(m => chordSeq._synth.noteOff(m)), 500);
+  setTimeout(() => midis.forEach(m => chordSeq._synth.noteOff(m)), 2000);
 }
 
 function _assignChordStep(idx, root, typeId) {
