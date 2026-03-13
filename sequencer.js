@@ -40,11 +40,11 @@ class Sequencer {
     this.drumEnabled = false;
 
     this.drumSteps = {
-      kick:    [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
-      snare:   [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean),
-      hihat:   [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0].map(Boolean),
-      openhat: new Array(16).fill(false),
-      clap:    new Array(16).fill(false),
+      kick:    [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0].map(Boolean), // 4つ打ち
+      snare:   [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean), // 2拍・4拍
+      hihat:   [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0].map(Boolean), // 8分刻み
+      openhat: [0,0,0,1, 0,0,0,1, 0,0,0,1, 0,0,0,1].map(Boolean), // 裏拍アクセント
+      clap:    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean), // スネアと同時
       cowbell: new Array(16).fill(false),
     };
   }
