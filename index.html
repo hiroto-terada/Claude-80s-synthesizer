@@ -283,6 +283,29 @@
     </section>
   </div>
 
+  <!-- ⑤ Melody Recorder Track -->
+  <section id="melody-section">
+    <div class="melody-header">
+      MELODY
+      <span id="melody-timbre" class="melody-timbre-tag">E.PIANO</span>
+      <button id="melody-onoff-btn" class="drum-toggle">OFF</button>
+      <button id="melody-rec-btn" class="melody-rec-btn">⏺ REC</button>
+      <button id="melody-play-btn" class="melody-play-btn">▶ PLAY</button>
+    </div>
+    <div id="melody-steps" class="melody-steps"></div>
+    <div class="seq-pattern-bar" id="melody-pattern-bar">
+      <button class="seq-pattern-save-btn" id="melody-pattern-save-btn">SAVE</button>
+      <button class="melody-pattern-slot" data-slot="0">P1</button>
+      <button class="melody-pattern-slot" data-slot="1">P2</button>
+      <button class="melody-pattern-slot" data-slot="2">P3</button>
+      <button class="melody-pattern-slot" data-slot="3">P4</button>
+      <button class="melody-pattern-slot" data-slot="4">P5</button>
+      <button class="melody-pattern-slot" data-slot="5">P6</button>
+      <button class="melody-pattern-slot" data-slot="6">P7</button>
+      <button class="melody-pattern-slot" data-slot="7">P8</button>
+    </div>
+  </section>
+
   <!-- ④ Keyboard -->
   <section id="keyboard-section">
     <div id="keyboard-scroll"><div id="keyboard"></div></div>
@@ -321,6 +344,7 @@
 <script src="sequencer.js"></script>
 <script src="chord.js"></script>
 <script src="drum.js"></script>
+<script src="melody.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>
