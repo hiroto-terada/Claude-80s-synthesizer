@@ -40,10 +40,12 @@ class Sequencer {
     this.drumEnabled = false;
 
     this.drumSteps = {
-      kick:  [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
-      snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean),
-      hihat: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0].map(Boolean),
-      clap:  new Array(16).fill(false),
+      kick:    [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
+      snare:   [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean),
+      hihat:   [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0].map(Boolean),
+      openhat: new Array(16).fill(false),
+      clap:    new Array(16).fill(false),
+      cowbell: new Array(16).fill(false),
     };
   }
 
@@ -171,10 +173,12 @@ class Sequencer {
 
     if (this.drumEnabled && typeof drumSynth !== 'undefined' && drumSynth) {
       const ds = this.drumSteps, s = this.currentStep;
-      if (ds.kick[s])  drumSynth.playKick();
-      if (ds.snare[s]) drumSynth.playSnare();
-      if (ds.hihat[s]) drumSynth.playHihat();
-      if (ds.clap[s])  drumSynth.playClap();
+      if (ds.kick[s])    drumSynth.playKick();
+      if (ds.snare[s])   drumSynth.playSnare();
+      if (ds.hihat[s])   drumSynth.playHihat();
+      if (ds.openhat[s]) drumSynth.playOpenHihat();
+      if (ds.clap[s])    drumSynth.playClap();
+      if (ds.cowbell[s]) drumSynth.playCowbell();
     }
 
     this._highlightStep(this.currentStep);

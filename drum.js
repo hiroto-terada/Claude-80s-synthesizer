@@ -54,7 +54,7 @@ class DrumSynth {
 
   playSnare() {
     const ctx = this.ctx, now = ctx.currentTime;
-    // Noise layer
+    // Noise body: bandpass mid-range
     const dur = 0.22;
     const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -67,6 +67,18 @@ class DrumSynth {
     nGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
     src.connect(filt); filt.connect(nGain); nGain.connect(this.masterGain);
     src.start(now);
+    // Snap/crack: hi-freq burst that cuts through the mix
+    const snapBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.03), ctx.sampleRate);
+    const sd = snapBuf.getChannelData(0);
+    for (let i = 0; i < sd.length; i++) sd[i] = Math.random() * 2 - 1;
+    const snapSrc  = ctx.createBufferSource(); snapSrc.buffer = snapBuf;
+    const snapFilt = ctx.createBiquadFilter();
+    snapFilt.type = 'highpass'; snapFilt.frequency.value = 7000;
+    const snapGain = ctx.createGain();
+    snapGain.gain.setValueAtTime(1.5, now);
+    snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    snapSrc.connect(snapFilt); snapFilt.connect(snapGain); snapGain.connect(this.masterGain);
+    snapSrc.start(now);
     // Tone body
     const osc  = ctx.createOscillator();
     const oGain = ctx.createGain();
@@ -93,6 +105,42 @@ class DrumSynth {
     src.start(now);
   }
 
+  playOpenHihat() {
+    const ctx = this.ctx, now = ctx.currentTime;
+    const dur = 0.45;
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src  = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'highpass'; filt.frequency.value = 7000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.45, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    src.connect(filt); filt.connect(gain); gain.connect(this.masterGain);
+    src.start(now);
+  }
+
+  playCowbell() {
+    const ctx = this.ctx, now = ctx.currentTime;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.55, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    gain.connect(this.masterGain);
+    // 808 cowbell: two detuned square oscillators through a bandpass
+    [562, 845].forEach(freq => {
+      const osc    = ctx.createOscillator();
+      const bp     = ctx.createBiquadFilter();
+      osc.type     = 'square';
+      osc.frequency.value = freq;
+      bp.type      = 'bandpass';
+      bp.frequency.value  = 700;
+      bp.Q.value   = 3.5;
+      osc.connect(bp); bp.connect(gain);
+      osc.start(now); osc.stop(now + 0.4);
+    });
+  }
+
   playClap() {
     const ctx = this.ctx, now = ctx.currentTime;
     [0, 0.012, 0.025].forEach(offset => {
@@ -116,10 +164,12 @@ class DrumSynth {
 
 // ── Drum track metadata ────────────────────────────────────
 const DRUM_TRACKS = [
-  { key: 'kick',  label: 'KICK',  color: '#00e5ff' },
-  { key: 'snare', label: 'SNARE', color: '#ff4da6' },
-  { key: 'hihat', label: 'H.HAT', color: '#aaff44' },
-  { key: 'clap',  label: 'CLAP',  color: '#ff9900' },
+  { key: 'kick',    label: 'KICK',  color: '#00e5ff' },
+  { key: 'snare',   label: 'SNARE', color: '#ff4da6' },
+  { key: 'hihat',   label: 'H.HAT', color: '#aaff44' },
+  { key: 'openhat', label: 'O.HAT', color: '#88ffcc' },
+  { key: 'clap',    label: 'CLAP',  color: '#ff9900' },
+  { key: 'cowbell', label: 'COWBL', color: '#cc88ff' },
 ];
 
 let drumSynth = null;
