@@ -74,6 +74,20 @@ header {
 }
 .brand-dash { color: var(--pink); }
 
+#fx-open-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-size: 0.75rem;
+  width: 26px; height: 26px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+#fx-open-btn:hover { border-color: var(--pink); color: var(--pink); }
+
 .preset-grid {
   display: flex;
   flex-wrap: wrap;
