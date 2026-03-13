@@ -395,10 +395,10 @@ function setLed(id, on) {
   // ── PC: キーボードショートカット ──
   // \ でトグル、Escape で閉じる
   document.addEventListener('keydown', e => {
-    if (e.key === '\\') {
-      drawer.classList.contains('open') ? closeDrawer() : openDrawer();
-    } else if (e.key === 'Escape' && drawer.classList.contains('open')) {
-      closeDrawer();
+    if (e.key === '\\' || e.key === 'ArrowRight') {
+      if (!drawer.classList.contains('open')) openDrawer();
+    } else if (e.key === 'Escape' || e.key === 'ArrowLeft') {
+      if (drawer.classList.contains('open')) closeDrawer();
     }
   });
 
