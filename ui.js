@@ -392,6 +392,21 @@ function setLed(id, on) {
   function closeDrawer() { drawer.classList.remove('open'); backdrop.classList.remove('open'); }
   backdrop.addEventListener('click', closeDrawer);
 
+  // ── PC: キーボードショートカット ──
+  // \ でトグル、Escape で閉じる
+  document.addEventListener('keydown', e => {
+    if (e.key === '\\') {
+      drawer.classList.contains('open') ? closeDrawer() : openDrawer();
+    } else if (e.key === 'Escape' && drawer.classList.contains('open')) {
+      closeDrawer();
+    }
+  });
+
+  // ── PC: ヘッダーのトグルボタン ──
+  document.getElementById('fx-open-btn').addEventListener('click', () => {
+    drawer.classList.contains('open') ? closeDrawer() : openDrawer();
+  });
+
   // ── Volume sliders ──
   sliderSynth.addEventListener('input', () => {
     if (synth) synth.setMasterVolume(parseFloat(sliderSynth.value));
