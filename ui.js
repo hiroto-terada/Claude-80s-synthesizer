@@ -99,11 +99,23 @@ document.getElementById('start-btn').addEventListener('click', () => {
         if (s._playBtn) { s._playBtn.textContent = '▶ PLAY'; s._playBtn.classList.remove('playing'); }
         if (s._recBtn)  { s._recBtn.classList.remove('recording'); s._recBtn.textContent = '⏺ REC'; }
       });
+      // メロディ PLAY ボタン + 録音キャンセル
+      const melBtn = document.getElementById('melody-play-btn');
+      if (melBtn) { melBtn.textContent = '▶ PLAY'; melBtn.classList.remove('playing'); }
+      if (typeof melodyTrack !== 'undefined' && melodyTrack) {
+        melodyTrack._pendingRecord = false;
+        melodyTrack.recording      = false;
+        const melRecBtn = document.getElementById('melody-rec-btn');
+        if (melRecBtn) { melRecBtn.classList.remove('recording'); melRecBtn.textContent = '⏺ REC'; }
+      }
     } else {
       all.forEach(s => s.play());
       all.forEach(s => {
         if (s._playBtn) { s._playBtn.textContent = '■ STOP'; s._playBtn.classList.add('playing'); }
       });
+      // メロディ PLAY ボタン
+      const melBtn = document.getElementById('melody-play-btn');
+      if (melBtn) { melBtn.textContent = '■ STOP'; melBtn.classList.add('playing'); }
     }
   });
   // Link all three pattern banks: loading slot N on any bar loads it on all
@@ -116,6 +128,8 @@ document.getElementById('start-btn').addEventListener('click', () => {
   initSeq2Toggle();
   initDrums();
   drumSynth.setSidechain([bassSynth.masterGain, bassSynth2.masterGain]);
+  initMelodyTrack();
+  melodyTrack._synth = synth;
   initRecorder();
 });
 

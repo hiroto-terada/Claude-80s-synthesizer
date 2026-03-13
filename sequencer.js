@@ -181,6 +181,11 @@ class Sequencer {
       if (ds.cowbell[s]) drumSynth.playCowbell();
     }
 
+    // メロディトラック (メインシーケンサーのみ駆動)
+    if (this === sequencer && typeof melodyTrack !== 'undefined' && melodyTrack) {
+      melodyTrack.onTick(this.currentStep);
+    }
+
     this._highlightStep(this.currentStep);
 
     if (this.playing) {
@@ -327,6 +332,12 @@ function _buildSeqUI(seq, opts) {
       s._playBtn.textContent = playing ? '■ STOP' : '▶ PLAY';
       s._playBtn.classList.toggle('playing', playing);
     });
+    // メロディ PLAY ボタンも同期
+    const melBtn = document.getElementById('melody-play-btn');
+    if (melBtn) {
+      melBtn.textContent = playing ? '■ STOP' : '▶ PLAY';
+      melBtn.classList.toggle('playing', playing);
+    }
   }
 
   recBtn.addEventListener('click', () => {
@@ -355,6 +366,13 @@ function _buildSeqUI(seq, opts) {
         s.stop();
         if (s._recBtn) { s._recBtn.classList.remove('recording'); s._recBtn.textContent = '⏺ REC'; }
       });
+      // メロディ録音もキャンセル
+      if (typeof melodyTrack !== 'undefined' && melodyTrack) {
+        melodyTrack._pendingRecord = false;
+        melodyTrack.recording      = false;
+        const melRecBtn = document.getElementById('melody-rec-btn');
+        if (melRecBtn) { melRecBtn.classList.remove('recording'); melRecBtn.textContent = '⏺ REC'; }
+      }
       setAllPlayBtnState(false);
     } else {
       all.forEach(s => s.play());

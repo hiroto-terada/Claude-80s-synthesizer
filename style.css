@@ -927,6 +927,166 @@ header {
   min-height: 1em;
 }
 
+/* ── Melody Recorder Track ── */
+#melody-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 10px;
+}
+
+.melody-header {
+  font-size: 0.5rem;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.melody-timbre-tag {
+  background: rgba(255,77,166,0.12);
+  border: 1px solid var(--pink);
+  color: var(--pink);
+  font-size: 0.48rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+#melody-steps {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.melody-step {
+  background: var(--knob);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 1px;
+  text-align: center;
+  min-height: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  transition: border-color 0.1s, box-shadow 0.1s, background 0.1s;
+}
+
+.melody-step.melody-on {
+  background: rgba(255,77,166,0.18);
+  border-color: var(--pink);
+}
+
+.melody-step.melody-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 5px rgba(0,229,255,0.4);
+}
+
+.melody-step.melody-rec-current {
+  border-color: #ff3333;
+  background: rgba(255,51,51,0.12);
+  box-shadow: 0 0 5px rgba(255,51,51,0.4);
+}
+
+.melody-step-num {
+  font-size: 0.38rem;
+  color: var(--dim);
+  line-height: 1;
+}
+
+.melody-note-name {
+  font-size: 0.52rem;
+  color: var(--dim);
+  line-height: 1;
+}
+
+.melody-step.melody-on .melody-note-name {
+  color: var(--pink);
+}
+
+/* Melody pattern slots */
+.melody-pattern-slot {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  padding: 3px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+  text-align: center;
+}
+.melody-pattern-slot.filled {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.melody-pattern-slot.filled:hover { background: rgba(0,229,255,0.08); }
+.seq-pattern-bar.save-mode .melody-pattern-slot {
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+.seq-pattern-bar.save-mode .melody-pattern-slot:hover {
+  background: rgba(255,204,0,0.12);
+}
+.melody-pattern-slot.loaded { background: rgba(0,229,255,0.12); }
+.melody-pattern-slot.pending {
+  border-color: var(--pink);
+  color: var(--pink);
+  animation: pattern-pending 0.7s step-start infinite;
+}
+
+/* Melody REC / PLAY buttons */
+.melody-rec-btn {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-left: auto;
+}
+.melody-rec-btn:hover { background: rgba(0,229,255,0.1); }
+.melody-rec-btn.recording {
+  border-color: #ff3333;
+  color: #ff3333;
+  background: rgba(255,51,51,0.1);
+  box-shadow: 0 0 8px rgba(255,51,51,0.4);
+  animation: rec-blink 1s step-start infinite;
+}
+
+.melody-play-btn {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.melody-play-btn:hover { background: rgba(0,229,255,0.1); }
+.melody-play-btn.playing {
+  border-color: var(--pink);
+  color: var(--pink);
+  background: rgba(255,77,166,0.08);
+  box-shadow: 0 0 8px rgba(255,77,166,0.3);
+}
+
 /* ── Drum Section ── */
 #drum-section {
   background: var(--panel);
