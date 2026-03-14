@@ -103,8 +103,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
       const melBtn = document.getElementById('melody-play-btn');
       if (melBtn) { melBtn.textContent = '▶ PLAY'; melBtn.classList.remove('playing'); }
       if (typeof melodyTrack !== 'undefined' && melodyTrack) {
-        melodyTrack._pendingRecord = false;
-        melodyTrack.recording      = false;
+        melodyTrack.stopAll();
         const melRecBtn = document.getElementById('melody-rec-btn');
         if (melRecBtn) { melRecBtn.classList.remove('recording'); melRecBtn.textContent = '⏺ REC'; }
       }
@@ -191,12 +190,17 @@ function addKeyHandlers(el, midi, label) {
     el.classList.add('active');
     synth.noteOn(midi);
     recMidi = midi; // update record buffer
+    if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOn(midi);
     if (activeWriteSeq) assignWriteStep(midi);
     document.getElementById('note-display').textContent = label;
     setLed('led-audio', true);
     setTimeout(() => setLed('led-audio', false), 120);
   };
-  const off = () => { el.classList.remove('active'); synth && synth.noteOff(midi); };
+  const off = () => {
+    el.classList.remove('active');
+    if (synth) synth.noteOff(midi);
+    if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOff(midi);
+  };
 
   el.addEventListener('mousedown',  e => { e.preventDefault(); on(); });
   el.addEventListener('mouseup',    off);
@@ -218,6 +222,7 @@ function initPCKeyboard() {
     const midi = noteNameToMidi(note + oct);
     synth.noteOn(midi);
     recMidi = midi; // update record buffer
+    if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOn(midi);
     if (activeWriteSeq) assignWriteStep(midi);
     const el = document.querySelector(`[data-midi="${midi}"]`);
     if (el) { el.classList.add('active'); document.getElementById('note-display').textContent = note + oct; }
@@ -231,6 +236,7 @@ function initPCKeyboard() {
     if (note.endsWith('+')) { note = note.slice(0, -1); oct++; }
     const midi = noteNameToMidi(note + oct);
     synth.noteOff(midi);
+    if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOff(midi);
     const el = document.querySelector(`[data-midi="${midi}"]`);
     if (el) el.classList.remove('active');
   });

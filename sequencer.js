@@ -183,7 +183,7 @@ class Sequencer {
 
     // メロディトラック (メインシーケンサーのみ駆動)
     if (this === sequencer && typeof melodyTrack !== 'undefined' && melodyTrack) {
-      melodyTrack.onTick(this.currentStep);
+      melodyTrack.onTick(this.currentStep, this.stepMs);
     }
 
     this._highlightStep(this.currentStep);
@@ -366,10 +366,9 @@ function _buildSeqUI(seq, opts) {
         s.stop();
         if (s._recBtn) { s._recBtn.classList.remove('recording'); s._recBtn.textContent = '⏺ REC'; }
       });
-      // メロディ録音もキャンセル
+      // メロディ停止
       if (typeof melodyTrack !== 'undefined' && melodyTrack) {
-        melodyTrack._pendingRecord = false;
-        melodyTrack.recording      = false;
+        melodyTrack.stopAll();
         const melRecBtn = document.getElementById('melody-rec-btn');
         if (melRecBtn) { melRecBtn.classList.remove('recording'); melRecBtn.textContent = '⏺ REC'; }
       }
