@@ -1,6 +1,6 @@
 /**
- * FM-80 Melody Recorder Track (イベントベース)
- * 鍵盤の noteOn/noteOff をタイムスタンプ付きで録音し、
+ * FM-80 Melody Recorder Track (タイムラインベース)
+ * 鍵盤の noteOn/noteOff をミリ秒タイムスタンプ付きで録音し、
  * シーケンサーの1ループに合わせてそのまま再生する。
  * 8個のパターンバンクで音色ごと保存可能。
  */
@@ -10,16 +10,16 @@ let melodyPatternBank = null;
 
 class MelodyTrack {
   constructor() {
-    // { type: 'on'|'off', midi: number, time: number(ms from loop start) }
+    // { type: 'on'|'off', midi: number, time: number(ms) }
     this.events  = [];
     this.timbre  = 'E.PIANO';
     this.enabled  = false;
     this.recording = false;
 
-    this._stepMs        = 0;    // 直近の stepMs (表示用)
-    this._loopMs        = 0;    // ループ全体の長さ
-    this._recStartTime  = 0;    // 録音開始の Date.now()
-    this._recTimer      = null; // 録音終了タイマー
+    this._stepMs        = 0;
+    this._loopMs        = 0;
+    this._recStartTime  = 0;
+    this._recTimer      = null;
     this._pendingRecord  = false;
     this._pendingPattern = null;
     this._playbackTimers = [];
@@ -27,24 +27,21 @@ class MelodyTrack {
     this.onRecordStop    = null;
   }
 
-  // ── 鍵盤イベントを外部から受け取る ─────────────────────
+  // ── 外部から受け取る鍵盤イベント ─────────────────────
   recordNoteOn(midi) {
     if (!this.recording) return;
     const t = Date.now() - this._recStartTime;
     this.events.push({ type: 'on', midi, time: t });
-    // 録音中もリアルタイムでセル表示を更新
-    if (this._stepMs > 0) {
-      const step = Math.min(15, Math.floor(t / this._stepMs));
-      this._updateStepUI(step);
-    }
+    this._renderTimeline();
   }
 
   recordNoteOff(midi) {
     if (!this.recording) return;
     this.events.push({ type: 'off', midi, time: Date.now() - this._recStartTime });
+    this._renderTimeline();
   }
 
-  // ── sequencer._tick() から毎ステップ呼ばれる ───────────
+  // ── sequencer._tick() から毎ステップ呼ばれる ──────────
   onTick(step, stepMs) {
     this._stepMs = stepMs;
 
@@ -68,27 +65,26 @@ class MelodyTrack {
         this.events        = [];
         this._recStartTime = Date.now();
         this.recording     = true;
-        this._refreshAllUI();
+        this._renderTimeline();
 
         this._recTimer = setTimeout(() => {
           this.recording = false;
-          // 末尾に全noteOffを補完（録音中に離し忘れた音を閉じる）
           this._closeOpenNotes(this._loopMs);
-          this._refreshAllUI();
+          this._renderTimeline();
           if (typeof this.onRecordStop === 'function') this.onRecordStop();
         }, this._loopMs);
       }
 
-      // 再生: ループ先頭でタイマーをスケジュール
+      // 再生スケジュール
       if (this.enabled && !this.recording) {
         this._schedulePlayback();
       }
     }
 
-    this._highlightStep(step);
+    this._moveCursor(step);
   }
 
-  // ── 再生スケジューリング ───────────────────────────────
+  // ── 再生 ──────────────────────────────────────────────
   _schedulePlayback() {
     this._clearPlayback();
     if (!this._synth || this.events.length === 0) return;
@@ -104,33 +100,25 @@ class MelodyTrack {
   _clearPlayback() {
     this._playbackTimers.forEach(t => clearTimeout(t));
     this._playbackTimers = [];
-    // 保険として全音解放
     if (this._synth) {
-      const played = new Set(
-        this.events.filter(e => e.type === 'on').map(e => e.midi)
-      );
+      const played = new Set(this.events.filter(e => e.type === 'on').map(e => e.midi));
       played.forEach(midi => this._synth.noteOff(midi));
     }
   }
 
-  // 録音終了時: 閉じていない noteOn に対して noteOff を補完
   _closeOpenNotes(endTime) {
     const held = new Map();
     this.events.forEach(ev => {
-      if (ev.type === 'on') {
-        held.set(ev.midi, (held.get(ev.midi) || 0) + 1);
-      } else {
+      if (ev.type === 'on') held.set(ev.midi, (held.get(ev.midi) || 0) + 1);
+      else {
         const n = held.get(ev.midi) || 0;
         if (n <= 1) held.delete(ev.midi);
         else held.set(ev.midi, n - 1);
       }
     });
-    held.forEach((_, midi) =>
-      this.events.push({ type: 'off', midi, time: endTime - 10 })
-    );
+    held.forEach((_, midi) => this.events.push({ type: 'off', midi, time: endTime - 10 }));
   }
 
-  // 外部からの停止 (シーケンサー停止 / ON→OFF)
   stopAll() {
     this._clearPlayback();
     if (this._recTimer) { clearTimeout(this._recTimer); this._recTimer = null; }
@@ -138,39 +126,41 @@ class MelodyTrack {
     this._pendingRecord = false;
   }
 
-  // ── UI ────────────────────────────────────────────────
-  _highlightStep(idx) {
-    const grid = document.getElementById('melody-steps');
-    if (!grid) return;
-    grid.querySelectorAll('.melody-step').forEach((el, i) => {
-      el.classList.toggle('melody-current',     i === idx);
-      el.classList.toggle('melody-rec-current', this.recording && i === idx);
+  // ── タイムライン表示 ──────────────────────────────────
+  _moveCursor(step) {
+    const cursor = document.getElementById('melody-cursor');
+    if (!cursor) return;
+    const pct = (step / 16) * 100;
+    cursor.style.left = pct + '%';
+    cursor.classList.toggle('rec', this.recording || this._pendingRecord);
+  }
+
+  _renderTimeline() {
+    const tl = document.getElementById('melody-timeline');
+    if (!tl) return;
+    // 既存のイベント棒を消す（カーソルは残す）
+    tl.querySelectorAll('.melody-event').forEach(el => el.remove());
+
+    const loopMs = this._loopMs || 16 * (this._stepMs || 230);
+    if (loopMs === 0) return;
+
+    // noteOn ごとに棒を描画
+    const ons = this.events.filter(ev => ev.type === 'on');
+    ons.forEach(ev => {
+      const left = (ev.time / loopMs) * 100;
+      // 対応する noteOff を探して幅を決める
+      const off = this.events.find(
+        o => o.type === 'off' && o.midi === ev.midi && o.time > ev.time
+      );
+      const dur   = off ? off.time - ev.time : loopMs * 0.02; // 見つからなければ細い棒
+      const width = Math.max(0.4, (dur / loopMs) * 100);
+
+      const bar = document.createElement('div');
+      bar.className  = 'melody-event';
+      bar.style.left  = left + '%';
+      bar.style.width = width + '%';
+      tl.appendChild(bar);
     });
-  }
-
-  // ステップ幅内に入る noteOn を探して表示
-  _updateStepUI(idx) {
-    const grid = document.getElementById('melody-steps');
-    if (!grid) return;
-    const cell = grid.querySelector(`.melody-step[data-step="${idx}"]`);
-    if (!cell) return;
-
-    const sw = this._stepMs || (this._loopMs / 16) || 230;
-    const t0 = idx * sw, t1 = t0 + sw;
-    const ons = this.events.filter(
-      ev => ev.type === 'on' && ev.time >= t0 && ev.time < t1
-    );
-    const nameEl = cell.querySelector('.melody-note-name');
-    if (nameEl) {
-      if (ons.length > 1)      nameEl.textContent = `×${ons.length}`;
-      else if (ons.length === 1) nameEl.textContent = seqMidiToName(ons[0].midi);
-      else                       nameEl.textContent = '──';
-    }
-    cell.classList.toggle('melody-on', ons.length > 0);
-  }
-
-  _refreshAllUI() {
-    for (let i = 0; i < 16; i++) this._updateStepUI(i);
   }
 }
 
@@ -182,20 +172,8 @@ function initMelodyTrack() {
   const recBtn        = document.getElementById('melody-rec-btn');
   const playBtn       = document.getElementById('melody-play-btn');
   const timbreDisplay = document.getElementById('melody-timbre');
-  const grid          = document.getElementById('melody-steps');
   const patternBar    = document.getElementById('melody-pattern-bar');
   const saveBtn       = document.getElementById('melody-pattern-save-btn');
-
-  // ── ステップ表示セルを生成 ──
-  for (let i = 0; i < 16; i++) {
-    const div = document.createElement('div');
-    div.className    = 'melody-step';
-    div.dataset.step = i;
-    div.innerHTML    =
-      `<div class="melody-step-num">${i + 1}</div>` +
-      `<div class="melody-note-name">──</div>`;
-    grid.appendChild(div);
-  }
 
   // ── ON / OFF ──
   onoffBtn.addEventListener('click', () => {
@@ -210,12 +188,10 @@ function initMelodyTrack() {
     if (!melodyTrack._synth) return;
     if (melodyTrack.recording || melodyTrack._pendingRecord) return;
 
-    // 現在の音色を記録
     const preset = document.querySelector('.preset-btn.active');
     melodyTrack.timbre = preset ? preset.dataset.preset : 'E.PIANO';
     timbreDisplay.textContent = melodyTrack.timbre;
 
-    // 再生も自動 ON
     melodyTrack.enabled = true;
     onoffBtn.textContent = 'ON';
     onoffBtn.classList.add('active');
@@ -270,7 +246,7 @@ function initMelodyTrack() {
   }
 
   // ── パターンバンク ───────────────────────────────────
-  const STORAGE_KEY = 'fm80-melody-patterns-v2'; // v2: event形式
+  const STORAGE_KEY = 'fm80-melody-patterns-v2';
   let patterns = Array(8).fill(null);
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -297,7 +273,7 @@ function initMelodyTrack() {
       melodyTrack._stepMs = p.stepMs  || melodyTrack._stepMs || 230;
       melodyTrack._loopMs = p.loopMs  || melodyTrack._stepMs * 16;
       timbreDisplay.textContent = p.timbre;
-      melodyTrack._refreshAllUI();
+      melodyTrack._renderTimeline();
       slotBtns.forEach(b => b.classList.remove('loaded', 'pending'));
       if (slotBtn) slotBtn.classList.add('loaded');
       if (melodyTrack._synth) {
@@ -314,8 +290,7 @@ function initMelodyTrack() {
       if (slotBtn) slotBtn.classList.add('pending');
       melodyTrack._pendingPattern = {
         events: p.events || [], timbre: p.timbre,
-        stepMs: p.stepMs, loopMs: p.loopMs,
-        onApply: apply,
+        stepMs: p.stepMs, loopMs: p.loopMs, onApply: apply,
       };
     } else {
       apply();
