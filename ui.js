@@ -124,11 +124,18 @@ document.getElementById('start-btn').addEventListener('click', () => {
   patternBank2.addPeer(chordPatternBank);
   chordPatternBank.addPeer(patternBank1);
   chordPatternBank.addPeer(patternBank2);
+  // メロディバンクも全バンクと連動
+  initMelodyTrack();
+  melodyTrack._synth = synth;
+  patternBank1.addPeer(melodyPatternBank);
+  patternBank2.addPeer(melodyPatternBank);
+  chordPatternBank.addPeer(melodyPatternBank);
+  melodyPatternBank.addPeer(patternBank1);
+  melodyPatternBank.addPeer(patternBank2);
+  melodyPatternBank.addPeer(chordPatternBank);
   initSeq2Toggle();
   initDrums();
   drumSynth.setSidechain([bassSynth.masterGain, bassSynth2.masterGain]);
-  initMelodyTrack();
-  melodyTrack._synth = synth;
   initRecorder();
 });
 

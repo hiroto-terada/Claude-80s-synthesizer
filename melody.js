@@ -316,8 +316,14 @@ function initMelodyTrack() {
       exitSaveMode();
     } else {
       doLoad(slot);
+      peers.forEach(p => p.doLoad(slot));
     }
   });
 
-  melodyPatternBank = { doLoad };
+  melodyPatternBank = {
+    doLoad,
+    addPeer(p) { peers.push(p); },
+  };
+
+  const peers = [];
 }
