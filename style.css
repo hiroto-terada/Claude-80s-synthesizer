@@ -1180,3 +1180,67 @@ header {
   background: rgba(170,255,68,0.1);
   box-shadow: 0 0 6px rgba(170,255,68,0.3);
 }
+
+/* ── VJ Display ── */
+#vj-wrap {
+  margin: 4px 0 0;
+  padding: 0 8px 8px;
+}
+
+#vj-toggle-btn {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 3px;
+  padding: 3px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+}
+#vj-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+#vj-section {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+#vj-section.open { display: flex; }
+
+#vj-canvas {
+  width: 320px;
+  height: 288px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #000;
+  max-width: 100%;
+}
+
+.vj-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.vj-style-btn {
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 2px;
+  padding: 3px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.vj-style-btn:hover { border-color: var(--pink); color: var(--pink); }
+.vj-style-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,255,204,0.08);
+}
