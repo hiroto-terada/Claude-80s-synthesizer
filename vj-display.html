@@ -79,6 +79,21 @@
     /* Hide HUD after 4s of no mouse movement */
     #hud { transition: opacity 0.6s; }
     #hud.hidden { opacity: 0; pointer-events: none; }
+
+    #audio-btn {
+      font-family: inherit;
+      font-size: 9px;
+      letter-spacing: 2px;
+      padding: 3px 8px;
+      background: rgba(15, 56, 15, 0.75);
+      border: 1px solid #306230;
+      color: #306230;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    #audio-btn:hover { color: #9bbc0f; border-color: #8bac0f; }
+    #audio-btn.on    { color: #9bbc0f; border-color: #8bac0f; background: rgba(15, 56, 15, 0.9); }
   </style>
 </head>
 <body>
@@ -91,15 +106,80 @@
     <button class="style-btn"        data-style="soft">SOFT</button>
     <button class="style-btn"        data-style="art">ART</button>
   </div>
+  <button id="audio-btn">♪ ENABLE AUDIO</button>
   <div id="status">CONNECTING...</div>
 </div>
 
+<script src="synth.js"></script>
+<script src="drum.js"></script>
 <script src="vj.js?v=4"></script>
 <script>
   const canvas   = document.getElementById('vj-canvas');
   const statusEl = document.getElementById('status');
   const hud      = document.getElementById('hud');
   const btns     = document.querySelectorAll('.style-btn');
+  const audioBtn = document.getElementById('audio-btn');
+
+  // ── PC Audio Engine ──────────────────────────────────────
+  let pcAudioCtx    = null;
+  let pcDrums       = null;
+  let pcMelody      = null;
+  let pcChordSynth  = null;
+  let pcBass1       = null;
+  let pcBass2       = null;
+  let pcChordMidis  = [];
+  let pcAudioReady  = false;
+
+  function enablePCAudio() {
+    if (pcAudioReady) return;
+    pcAudioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+    pcDrums      = new DrumSynth(pcAudioCtx);
+    pcMelody     = new FMSynth(pcAudioCtx);
+    pcChordSynth = new FMSynth(pcAudioCtx);
+    pcChordSynth.setPatch('STRINGS');
+    pcBass1      = new TB303Synth(pcAudioCtx);
+    pcBass2      = new TB303Synth(pcAudioCtx);
+    pcDrums.setSidechain([pcBass1.masterGain, pcBass2.masterGain]);
+    pcAudioReady = true;
+    audioBtn.textContent = '♪ AUDIO ON';
+    audioBtn.classList.add('on');
+  }
+
+  audioBtn.addEventListener('click', enablePCAudio);
+
+  function handleAudioEvent(ev) {
+    if (!pcAudioReady) return;
+    switch (ev.t) {
+      case 'kick':   pcDrums.playKick();      break;
+      case 'snare':  pcDrums.playSnare();     break;
+      case 'drum':
+        if (ev.d === 'hihat')   pcDrums.playHihat();
+        if (ev.d === 'openhat') pcDrums.playOpenHihat();
+        if (ev.d === 'clap')    pcDrums.playClap();
+        if (ev.d === 'cowbell') pcDrums.playCowbell();
+        break;
+      case 'bass': {
+        const b = ev.seq === 'seq2' ? pcBass2 : pcBass1;
+        b.allNotesOff();
+        b.noteOn(ev.midi);
+        setTimeout(() => b.noteOff(ev.midi), ev.dur || 200);
+        break;
+      }
+      case 'chord': {
+        pcChordMidis.forEach(m => pcChordSynth.noteOff(m));
+        pcChordMidis = ev.notes || [];
+        pcChordMidis.forEach(m => pcChordSynth.noteOn(m));
+        break;
+      }
+      case 'note':
+        pcMelody.noteOn(ev.m);
+        setTimeout(() => pcMelody.noteOff(ev.m), 300);
+        break;
+      case 'preset':
+        if (pcMelody) pcMelody.setPatch(ev.name);
+        break;
+    }
+  }
 
   // ── VJ display instance ─────────────────────────────────
   const display = new VJDisplay(canvas);
@@ -176,6 +256,7 @@
           case 'note':  display.onNote(ev.m);     break;
           case 'style': setStyle(ev.s);           break;
         }
+        handleAudioEvent(ev);
       } catch (_) {}
     };
   }
