@@ -27,6 +27,12 @@ class VJDisplay {
     // DIGITAL mode: 3D blocks spawned by notes
     this._blocks = [];
 
+    // DIGITAL mode: cars and digital noise
+    this._cars      = [];
+    this._noises    = [];
+    this._carTimer  = 60 + Math.floor(Math.random() * 80);
+    this._noiseTimer = 240 + Math.floor(Math.random() * 200);
+
     // Soft mode blob state
     this._blobs = Array.from({ length: 5 }, () => ({
       x: Math.random() * 160, y: Math.random() * 144,
@@ -53,7 +59,11 @@ class VJDisplay {
     this.step = step;
     if (step % 4 === 0) this.beat++;
   }
-  onKick()  { this.kick  = 10; }
+  onKick()  {
+    this.kick = 10;
+    // Occasional noise burst on kick
+    if (Math.random() < 0.35) this._spawnNoise();
+  }
   onSnare() { this.snare = 6;  this._glitch = 4; }
 
   // Called when a melody/chord/keyboard note is triggered
@@ -230,6 +240,43 @@ class VJDisplay {
       if (this._blocks[i].z < 4) this._blocks.splice(i, 1);
     }
 
+    // ── CARS: spawn timer ───────────────────────────────────
+    if (--this._carTimer <= 0) {
+      this._spawnCar();
+      this._carTimer = 70 + Math.floor(Math.random() * 100);
+    }
+
+    // ── CARS: draw (far-to-near) ────────────────────────────
+    this._cars.sort((a, b) => b.z - a.z);
+    for (let i = this._cars.length - 1; i >= 0; i--) {
+      const c = this._cars[i];
+      c.z -= c.speed;
+      if (c.z < 3) { this._cars.splice(i, 1); continue; }
+      const ct = Math.min(fov / c.z, 1.0);
+      if (ct < 0.03) continue;
+      const csx = Math.round(vpX + c.x * ct);
+      const csy = Math.round(hy + ct * gH);
+      this._drawCar(csx, csy, ct, G0, G1, G2, G3);
+    }
+
+    // ── NOISE: spawn timer ──────────────────────────────────
+    if (--this._noiseTimer <= 0) {
+      this._spawnNoise();
+      this._noiseTimer = 280 + Math.floor(Math.random() * 320);
+    }
+    // Extra occasional noise on beat 0 of every 8 bars
+    if (this.beat > 0 && this.beat % 8 === 0 && this.step === 0 && Math.random() < 0.4) {
+      this._spawnNoise();
+    }
+
+    // ── NOISE: render ───────────────────────────────────────
+    for (let i = this._noises.length - 1; i >= 0; i--) {
+      const n = this._noises[i];
+      this._renderNoise(n, G0, G1, G2, G3);
+      n.life--;
+      if (n.life <= 0) this._noises.splice(i, 1);
+    }
+
     // ── KICK SHOCKWAVE RINGS ────────────────────────────────
     if (kick > 0) {
       const kt = (10 - kick) / 10;  // expands 0→1 during kick decay
@@ -288,6 +335,159 @@ class VJDisplay {
             ctx.fillRect(x + i * (4 * scale) + col * scale, y + row * scale, scale, scale);
           }
         }
+      }
+    }
+  }
+
+  // ────────────────────────────────────────────────────────
+  // Car helpers
+  // ────────────────────────────────────────────────────────
+  _spawnCar() {
+    // Lane positions: ±14 = inner lanes, ±28 = outer lanes
+    const lanes = [-28, -14, 14, 28];
+    const x = lanes[Math.floor(Math.random() * lanes.length)];
+    this._cars.push({
+      x,
+      z:     210 + Math.random() * 50,
+      speed: 4.0 + Math.random() * 2.5,  // faster than road scroll (1.6)
+    });
+    if (this._cars.length > 5) this._cars.shift();
+  }
+
+  // Futuristic pixel-art car viewed slightly from above/behind
+  _drawCar(sx, groundY, t, G0, G1, G2, G3) {
+    const { ctx } = this;
+    // 1 art-unit = ps screen pixels
+    const ps  = Math.max(1, Math.round(t * 2.5));
+    const CW  = 8;   // car width in art-units
+    const CL  = 5;   // car length in art-units (screen Y extent)
+    const pw  = CW * ps;
+    const ph  = CL * ps;
+    const lx  = sx - (pw >> 1);
+    const ty  = groundY - ph;
+
+    // ── Body ──
+    ctx.fillStyle = G2;
+    ctx.fillRect(lx, ty, pw, ph);
+
+    if (ps >= 2) {
+      // Cockpit (dark glass dome, centered)
+      ctx.fillStyle = G1;
+      ctx.fillRect(lx + ps * 2, ty + ps, pw - ps * 4, ps * 2);
+
+      // Side racing stripes
+      ctx.fillStyle = G3;
+      ctx.fillRect(lx + ps,       ty + ps, ps, ph - ps * 2);
+      ctx.fillRect(lx + pw - ps*2, ty + ps, ps, ph - ps * 2);
+
+      // Rear spoiler fins (dark, sticking up behind car)
+      ctx.fillStyle = G1;
+      ctx.fillRect(lx + ps,        ty - ps, ps, ps);
+      ctx.fillRect(lx + pw - ps*2, ty - ps, ps, ps);
+
+      // Exhaust glow (G3 at rear center)
+      ctx.fillStyle = G3;
+      ctx.fillRect(lx + ps * 3, ty - ps, ps, ps);
+      ctx.fillRect(lx + pw - ps*4, ty - ps, ps, ps);
+
+      // Tail lights
+      ctx.fillStyle = G3;
+      ctx.fillRect(lx,        ty,         ps, ps);
+      ctx.fillRect(lx + pw - ps, ty,      ps, ps);
+
+      // Headlights (front = viewer-facing bottom of sprite)
+      ctx.fillStyle = G3;
+      ctx.fillRect(lx,        groundY - ps, ps * 2, ps);
+      ctx.fillRect(lx + pw - ps*2, groundY - ps, ps * 2, ps);
+
+      // Dark undercarriage side panels
+      ctx.fillStyle = G1;
+      ctx.fillRect(lx,        ty, ps, ph);
+      ctx.fillRect(lx + pw - ps, ty, ps, ph);
+    } else {
+      // Minimal: just headlights at front corners
+      ctx.fillStyle = G3;
+      ctx.fillRect(lx,       groundY - 1, 1, 1);
+      ctx.fillRect(lx + pw - 1, groundY - 1, 1, 1);
+    }
+
+    // Ground shadow
+    if (t > 0.2) {
+      ctx.fillStyle = G1;
+      ctx.fillRect(lx - 1, groundY, pw + 2, 1);
+    }
+  }
+
+  // ────────────────────────────────────────────────────────
+  // Digital noise helpers
+  // ────────────────────────────────────────────────────────
+  _spawnNoise() {
+    const types = ['static', 'scanbar', 'tile', 'static'];  // weighted toward static
+    const type  = types[Math.floor(Math.random() * types.length)];
+    const inSky = Math.random() < 0.3;
+    const yMax  = inSky ? 48 : 130;
+    const yMin  = inSky ? 2  : 55;
+    this._noises.push({
+      type,
+      x:       Math.floor(Math.random() * 120),
+      y:       yMin + Math.floor(Math.random() * (yMax - yMin)),
+      w:       type === 'scanbar' ? 160 : 8  + Math.floor(Math.random() * 28),
+      h:       type === 'scanbar' ? 1 + Math.floor(Math.random() * 3)
+                                  : 4  + Math.floor(Math.random() * 14),
+      life:    type === 'scanbar' ? 3 + Math.floor(Math.random() * 5)
+                                  : 6  + Math.floor(Math.random() * 10),
+      maxLife: 0,  // set below
+    });
+    const n = this._noises[this._noises.length - 1];
+    n.maxLife = n.life;
+  }
+
+  _renderNoise(n, G0, G1, G2, G3) {
+    const { ctx } = this;
+    const alpha = n.life / n.maxLife;  // fade out
+
+    switch (n.type) {
+      case 'static': {
+        // Random pixel snow
+        const density = 0.45 * alpha;
+        for (let py = n.y; py < n.y + n.h; py++) {
+          for (let px = n.x; px < n.x + n.w; px++) {
+            if (Math.random() < density) {
+              const v = Math.random();
+              ctx.fillStyle = v < 0.25 ? G3 : v < 0.55 ? G2 : v < 0.8 ? G1 : G0;
+              ctx.fillRect(px, py, 1, 1);
+            }
+          }
+        }
+        break;
+      }
+      case 'scanbar': {
+        // Bright scan-line bar sliding across screen
+        const lifeR = alpha;
+        ctx.fillStyle = lifeR > 0.6 ? G3 : G2;
+        ctx.fillRect(0, n.y, 160, n.h);
+        // Static on top of bar
+        for (let px = 0; px < 160; px += 2) {
+          if (Math.random() > 0.55) {
+            ctx.fillStyle = Math.random() > 0.5 ? G2 : G0;
+            ctx.fillRect(px, n.y, 2, n.h);
+          }
+        }
+        break;
+      }
+      case 'tile': {
+        // Checkerboard glitch block
+        for (let py = n.y; py < n.y + n.h; py++) {
+          for (let px = n.x; px < n.x + n.w; px++) {
+            ctx.fillStyle = ((px + py) & 1) ? G2 : G0;
+            ctx.fillRect(px, py, 1, 1);
+          }
+        }
+        // Bright border
+        ctx.fillStyle = G3;
+        ctx.fillRect(n.x, n.y, n.w, 1);
+        ctx.fillRect(n.x, n.y + n.h - 1, n.w, 1);
+        break;
       }
     }
   }
