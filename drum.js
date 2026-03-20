@@ -16,8 +16,8 @@ class DrumSynth {
     this._sidechainGains = gains;
   }
 
-  playKick() {
-    const ctx = this.ctx, now = ctx.currentTime;
+  playKick(when) {
+    const ctx = this.ctx, now = when !== undefined ? when : ctx.currentTime;
 
     // Sidechain: briefly duck bass synths so kick punches through
     this._sidechainGains.forEach(g => {
@@ -52,8 +52,8 @@ class DrumSynth {
     click.stop(now + 0.025);
   }
 
-  playSnare() {
-    const ctx = this.ctx, now = ctx.currentTime;
+  playSnare(when) {
+    const ctx = this.ctx, now = when !== undefined ? when : ctx.currentTime;
     // Noise body: bandpass mid-range
     const dur = 0.22;
     const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
@@ -89,8 +89,8 @@ class DrumSynth {
     osc.start(now); osc.stop(now + 0.1);
   }
 
-  playHihat() {
-    const ctx = this.ctx, now = ctx.currentTime;
+  playHihat(when) {
+    const ctx = this.ctx, now = when !== undefined ? when : ctx.currentTime;
     const dur = 0.07;
     const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -105,8 +105,8 @@ class DrumSynth {
     src.start(now);
   }
 
-  playOpenHihat() {
-    const ctx = this.ctx, now = ctx.currentTime;
+  playOpenHihat(when) {
+    const ctx = this.ctx, now = when !== undefined ? when : ctx.currentTime;
     const dur = 0.45;
     const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -121,8 +121,8 @@ class DrumSynth {
     src.start(now);
   }
 
-  playCowbell() {
-    const ctx = this.ctx, now = ctx.currentTime;
+  playCowbell(when) {
+    const ctx = this.ctx, now = when !== undefined ? when : ctx.currentTime;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.55, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
@@ -141,8 +141,8 @@ class DrumSynth {
     });
   }
 
-  playClap() {
-    const ctx = this.ctx, now = ctx.currentTime;
+  playClap(when) {
+    const ctx = this.ctx, now = when !== undefined ? when : ctx.currentTime;
     [0, 0.012, 0.025].forEach(offset => {
       const dur = 0.06;
       const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
@@ -157,6 +157,17 @@ class DrumSynth {
       src.connect(filt); filt.connect(gain); gain.connect(this.masterGain);
       src.start(now + offset);
     });
+  }
+
+  playAt(type, when) {
+    switch (type) {
+      case 'kick':    this.playKick(when);    break;
+      case 'snare':   this.playSnare(when);   break;
+      case 'hihat':   this.playHihat(when);   break;
+      case 'openhat': this.playOpenHihat(when); break;
+      case 'clap':    this.playClap(when);    break;
+      case 'cowbell': this.playCowbell(when); break;
+    }
   }
 
   setMasterVolume(v) { this.masterGain.gain.value = v; }

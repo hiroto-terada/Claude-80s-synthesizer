@@ -120,6 +120,123 @@
   const btns     = document.querySelectorAll('.style-btn');
   const audioBtn = document.getElementById('audio-btn');
 
+  // ── Chord utils (mirror of chord.js, no UI dependencies) ─
+  const PC_CHORD_TYPES = [
+    { id: 'maj',  intervals: [0, 4, 7] },
+    { id: 'min',  intervals: [0, 3, 7] },
+    { id: '7',    intervals: [0, 4, 7, 10] },
+    { id: 'm7',   intervals: [0, 3, 7, 10] },
+    { id: 'maj7', intervals: [0, 4, 7, 11] },
+    { id: 'dim',  intervals: [0, 3, 6] },
+    { id: 'sus4', intervals: [0, 5, 7] },
+  ];
+  function chordMidisPC(root, typeId) {
+    const type = PC_CHORD_TYPES.find(t => t.id === typeId);
+    return (type ? type.intervals : [0, 4, 7]).map(i => root + i);
+  }
+
+  // ── PC Sequencer ─────────────────────────────────────────
+  // Runs the full pattern locally on the PC's Web Audio clock.
+  // Uses 100ms lookahead so notes are sample-accurately scheduled.
+  class PCSequencer {
+    constructor(audioCtx, drums, bass1, bass2, chordSynth) {
+      this.ctx        = audioCtx;
+      this.drums      = drums;
+      this.bass1      = bass1;
+      this.bass2      = bass2;
+      this.chordSynth = chordSynth;
+      this.playing    = false;
+      this.step       = 0;
+      this.nextStepTime    = 0;
+      this.stepSec         = 0.2;
+      this._prevChordMidis = [];
+      this._timerId        = null;
+      this.seq1Steps  = [];
+      this.seq2Steps  = [];
+      this.drumSteps  = null;
+      this.drumEnabled = false;
+      this.chordSteps = [];
+    }
+
+    start(data) {
+      this.stop();
+      this.stepSec     = (60 / data.bpm) / 4;
+      this.seq1Steps   = data.seq1  || [];
+      this.seq2Steps   = data.seq2  || [];
+      this.drumSteps   = data.drums || null;
+      this.drumEnabled = data.drumEnabled || false;
+      this.chordSteps  = data.chord || [];
+      this.step        = 0;
+      this.nextStepTime = this.ctx.currentTime + 0.05;
+      this.playing = true;
+      this._schedule();
+    }
+
+    stop() {
+      this.playing = false;
+      if (this._timerId) { clearTimeout(this._timerId); this._timerId = null; }
+      this._prevChordMidis.forEach(m => this.chordSynth.noteOff(m));
+      this._prevChordMidis = [];
+    }
+
+    updateBpm(bpm) { this.stepSec = (60 / bpm) / 4; }
+
+    _schedule() {
+      const LOOKAHEAD = 0.1; // seconds
+      while (this.nextStepTime < this.ctx.currentTime + LOOKAHEAD) {
+        this._scheduleStep(this.step, this.nextStepTime);
+        this.step = (this.step + 1) % 16;
+        this.nextStepTime += this.stepSec;
+      }
+      if (this.playing) {
+        this._timerId = setTimeout(() => this._schedule(), 25);
+      }
+    }
+
+    _scheduleStep(s, when) {
+      // Drums
+      if (this.drumEnabled && this.drumSteps) {
+        const ds = this.drumSteps;
+        if (ds.kick[s])    this.drums.playAt('kick',    when);
+        if (ds.snare[s])   this.drums.playAt('snare',   when);
+        if (ds.hihat[s])   this.drums.playAt('hihat',   when);
+        if (ds.openhat[s]) this.drums.playAt('openhat', when);
+        if (ds.clap[s])    this.drums.playAt('clap',    when);
+        if (ds.cowbell[s]) this.drums.playAt('cowbell', when);
+      }
+
+      // SEQ1 bass
+      const step1 = this.seq1Steps[s];
+      if (step1 && step1.active) {
+        this.bass1.noteOnAt(step1.midi, when, this.stepSec * 0.8);
+      }
+
+      // SEQ2 bass
+      const step2 = this.seq2Steps[s];
+      if (step2 && step2.active) {
+        this.bass2.noteOnAt(step2.midi, when, this.stepSec * 0.8);
+      }
+
+      // Chord — only retrigger when chord actually changes
+      const cstep = this.chordSteps[s];
+      if (cstep) {
+        if (cstep.active && cstep.chord) {
+          const newMidis = chordMidisPC(cstep.chord.root, cstep.chord.type);
+          const toOff = this._prevChordMidis.filter(m => !newMidis.includes(m));
+          const toOn  = newMidis.filter(m => !this._prevChordMidis.includes(m));
+          if (toOff.length || toOn.length) {
+            toOff.forEach(m => this.chordSynth.noteOffAt(m, when));
+            toOn.forEach(m  => this.chordSynth.noteOnAt(m, 0.8, when));
+            this._prevChordMidis = [...newMidis];
+          }
+        } else if (!cstep.active && this._prevChordMidis.length) {
+          this._prevChordMidis.forEach(m => this.chordSynth.noteOffAt(m, when));
+          this._prevChordMidis = [];
+        }
+      }
+    }
+  }
+
   // ── PC Audio Engine ──────────────────────────────────────
   let pcAudioCtx    = null;
   let pcDrums       = null;
@@ -129,6 +246,9 @@
   let pcBass2       = null;
   let pcChordMidis  = [];
   let pcAudioReady  = false;
+  let pcSequencer   = null;
+  let pcSeqActive   = false;
+  let pendingPlayData = null;
 
   function enablePCAudio() {
     if (pcAudioReady) return;
@@ -140,18 +260,52 @@
     pcBass1      = new TB303Synth(pcAudioCtx);
     pcBass2      = new TB303Synth(pcAudioCtx);
     pcDrums.setSidechain([pcBass1.masterGain, pcBass2.masterGain]);
+    pcSequencer  = new PCSequencer(pcAudioCtx, pcDrums, pcBass1, pcBass2, pcChordSynth);
     pcAudioReady = true;
     audioBtn.textContent = '♪ AUDIO ON';
     audioBtn.classList.add('on');
+    // Start sequencer if a play event arrived before audio was enabled
+    if (pendingPlayData) {
+      pcSequencer.start(pendingPlayData);
+      pcSeqActive = true;
+      pendingPlayData = null;
+    }
   }
 
   audioBtn.addEventListener('click', enablePCAudio);
 
   function handleAudioEvent(ev) {
-    if (!pcAudioReady) return;
     switch (ev.t) {
-      case 'kick':   pcDrums.playKick();      break;
-      case 'snare':  pcDrums.playSnare();     break;
+      // ── PC Sequencer control (always handled) ───────────
+      case 'pc_play':
+        if (!pcAudioReady) { pendingPlayData = ev; return; }
+        pcSequencer.start(ev);
+        pcSeqActive = true;
+        return;
+      case 'pc_stop':
+        if (pcAudioReady) pcSequencer.stop();
+        pcSeqActive = false;
+        pendingPlayData = null;
+        return;
+      case 'pc_bpm':
+        if (pcAudioReady && pcSeqActive) pcSequencer.updateBpm(ev.bpm);
+        return;
+      // ── Live/control events (always pass through) ───────
+      case 'note':
+        if (!pcAudioReady) return;
+        pcMelody.noteOn(ev.m);
+        setTimeout(() => pcMelody.noteOff(ev.m), 300);
+        return;
+      case 'preset':
+        if (pcAudioReady && pcMelody) pcMelody.setPatch(ev.name);
+        return;
+    }
+
+    // ── Legacy per-event audio (only when PC sequencer is NOT active) ──
+    if (!pcAudioReady || pcSeqActive) return;
+    switch (ev.t) {
+      case 'kick':  pcDrums.playKick();  break;
+      case 'snare': pcDrums.playSnare(); break;
       case 'drum':
         if (ev.d === 'hihat')   pcDrums.playHihat();
         if (ev.d === 'openhat') pcDrums.playOpenHihat();
@@ -165,18 +319,10 @@
         setTimeout(() => b.noteOff(ev.midi), ev.dur || 200);
         break;
       }
-      case 'chord': {
+      case 'chord':
         pcChordMidis.forEach(m => pcChordSynth.noteOff(m));
         pcChordMidis = ev.notes || [];
         pcChordMidis.forEach(m => pcChordSynth.noteOn(m));
-        break;
-      }
-      case 'note':
-        pcMelody.noteOn(ev.m);
-        setTimeout(() => pcMelody.noteOff(ev.m), 300);
-        break;
-      case 'preset':
-        if (pcMelody) pcMelody.setPatch(ev.name);
         break;
     }
   }
