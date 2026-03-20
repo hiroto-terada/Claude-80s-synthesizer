@@ -197,6 +197,7 @@ function addKeyHandlers(el, midi, label) {
     if (audioCtx && audioCtx.state !== 'running') audioCtx.resume();
     el.classList.add('active');
     synth.noteOn(midi);
+    if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onNote(midi);
     recMidi = midi; // update record buffer
     if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOn(midi);
     if (activeWriteSeq) assignWriteStep(midi);
@@ -229,6 +230,7 @@ function initPCKeyboard() {
     if (note.endsWith('+')) { note = note.slice(0, -1); oct++; }
     const midi = noteNameToMidi(note + oct);
     synth.noteOn(midi);
+    if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onNote(midi);
     recMidi = midi; // update record buffer
     if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOn(midi);
     if (activeWriteSeq) assignWriteStep(midi);
