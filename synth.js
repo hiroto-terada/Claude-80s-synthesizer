@@ -171,6 +171,71 @@ class FMSynth {
   allNotesOff() {
     Object.keys(this.voices).forEach(n => this.noteOff(parseInt(n)));
   }
+
+  // ── Scheduled variants (for PCSequencer lookahead) ───────
+
+  noteOnAt(noteNumber, velocity = 0.8, when) {
+    const freq = midiToFreq(noteNumber);
+    const now  = when;
+    const p    = this.patch;
+
+    const mod = this.ctx.createOscillator();
+    mod.type = 'sine';
+    mod.frequency.value = freq * p.modRatio;
+
+    const modEnv = this.ctx.createGain();
+    const modPeak = Math.max(0.001, p.modIndex * freq * velocity);
+    modEnv.gain.setValueAtTime(0.0001, now);
+    modEnv.gain.linearRampToValueAtTime(modPeak, now + p.modAttack);
+    modEnv.gain.exponentialRampToValueAtTime(
+      Math.max(0.001, modPeak * p.modSustain),
+      now + p.modAttack + p.modDecay
+    );
+
+    const car = this.ctx.createOscillator();
+    car.type = 'sine';
+    car.frequency.value = freq;
+
+    const carEnv = this.ctx.createGain();
+    const carPeak = velocity * 0.5;
+    carEnv.gain.setValueAtTime(0.0001, now);
+    carEnv.gain.linearRampToValueAtTime(carPeak, now + p.attack);
+    carEnv.gain.exponentialRampToValueAtTime(
+      Math.max(0.001, carPeak * p.sustain),
+      now + p.attack + p.decay
+    );
+
+    mod.connect(modEnv);
+    modEnv.connect(car.frequency);
+    car.connect(carEnv);
+    carEnv.connect(this.filter);
+
+    mod.start(now);
+    car.start(now);
+
+    this.voices[noteNumber] = { car, mod, carEnv, modEnv };
+  }
+
+  noteOffAt(noteNumber, when) {
+    const v = this.voices[noteNumber];
+    if (!v) return;
+
+    const now = when;
+    const p   = this.patch;
+
+    v.carEnv.gain.cancelScheduledValues(now);
+    v.carEnv.gain.setValueAtTime(v.carEnv.gain.value, now);
+    v.carEnv.gain.exponentialRampToValueAtTime(0.0001, now + p.release);
+
+    v.modEnv.gain.cancelScheduledValues(now);
+    v.modEnv.gain.setValueAtTime(v.modEnv.gain.value, now);
+    v.modEnv.gain.exponentialRampToValueAtTime(0.0001, now + p.modRelease);
+
+    v.car.stop(now + p.release + 0.05);
+    v.mod.stop(now + p.modRelease + 0.05);
+
+    delete this.voices[noteNumber];
+  }
 }
 
 // ── TB-303-style Bass Synth ───────────────────────────────
@@ -301,6 +366,43 @@ class TB303Synth {
 
   allNotesOff() {
     Object.keys(this.voices).forEach(n => this.noteOff(parseInt(n)));
+  }
+
+  // ── Scheduled variant (for PCSequencer lookahead) ────────
+  // Self-contained: attack/decay/release fully scheduled in Web Audio clock.
+  // duration: note-on length in seconds (release starts at when + duration).
+  noteOnAt(noteNumber, when, duration) {
+    const freq = midiToFreq(noteNumber);
+    const t    = when;
+    // Allow natural 303 decay (120ms) before release, regardless of requested dur
+    const relT = t + Math.max(duration !== undefined ? duration : 0.2, 0.13);
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.Q.value = 8;
+    const baseCutoff = Math.max(80, freq * 0.9);
+    const envPeak    = Math.min(8000, baseCutoff + 1800 + freq * 2);
+    filter.frequency.setValueAtTime(baseCutoff, t);
+    filter.frequency.linearRampToValueAtTime(envPeak, t + 0.005);
+    filter.frequency.exponentialRampToValueAtTime(baseCutoff, t + 0.35);
+
+    const ampEnv = this.ctx.createGain();
+    ampEnv.gain.setValueAtTime(0.0001, t);
+    ampEnv.gain.linearRampToValueAtTime(0.6, t + 0.004);
+    ampEnv.gain.exponentialRampToValueAtTime(0.18, t + 0.12);
+    // Scheduled release
+    ampEnv.gain.setValueAtTime(0.18, relT);
+    ampEnv.gain.exponentialRampToValueAtTime(0.0001, relT + 0.04);
+
+    osc.connect(filter);
+    filter.connect(ampEnv);
+    ampEnv.connect(this.distortion);
+    osc.start(t);
+    osc.stop(relT + 0.08);
   }
 
   setMasterVolume(v) { this.masterGain.gain.value = v; }

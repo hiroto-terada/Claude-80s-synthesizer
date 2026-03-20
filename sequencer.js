@@ -92,6 +92,23 @@ class Sequencer {
     if (this.playing) return;
     this.playing = true;
     this.currentStep = -1;
+
+    // Send full pattern snapshot to PC so it can run its own precise clock
+    if (this === sequencer && typeof vjRelay !== 'undefined') {
+      vjRelay.onPlay(
+        this.bpm,
+        this.steps.map(s => ({ midi: s.midi, active: s.active })),
+        (typeof sequencer2 !== 'undefined' && sequencer2)
+          ? sequencer2.steps.map(s => ({ midi: s.midi, active: s.active }))
+          : [],
+        this.drumSteps,
+        this.drumEnabled,
+        (typeof chordSeq !== 'undefined' && chordSeq)
+          ? chordSeq.steps.map(s => ({ active: s.active, chord: s.chord }))
+          : []
+      );
+    }
+
     this._tick();
   }
 
@@ -108,6 +125,9 @@ class Sequencer {
     if (this._pendingPattern) {
       if (typeof this._pendingPattern.onCancel === 'function') this._pendingPattern.onCancel();
       this._pendingPattern = null;
+    }
+    if (this === sequencer && typeof vjRelay !== 'undefined') {
+      vjRelay.onStop();
     }
   }
 
@@ -394,6 +414,7 @@ function _buildSeqUI(seq, opts) {
       const el = document.getElementById(id);
       if (el) el.textContent = newBpm;
     });
+    if (typeof vjRelay !== 'undefined') vjRelay.onBpm(newBpm);
   }
   const bpmDisplay = document.getElementById(bpmDisplayId);
   document.getElementById(bpmDownId).addEventListener('click', () => {

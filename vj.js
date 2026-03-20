@@ -744,5 +744,10 @@ const vjRelay = (() => {
     onBass:   (seq, midi, dur) => send({ t: 'bass', seq, midi, dur }),
     onChord:  notes          => send({ t: 'chord', notes }),
     onPreset: name           => send({ t: 'preset', name }),
+    // PC Sequencer control: sends full pattern so PC can run its own clock
+    onPlay: (bpm, seq1, seq2, drums, drumEnabled, chord) =>
+      send({ t: 'pc_play', bpm, seq1, seq2, drums, drumEnabled, chord }),
+    onStop: () => send({ t: 'pc_stop' }),
+    onBpm:  bpm => send({ t: 'pc_bpm', bpm }),
   };
 })();
