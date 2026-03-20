@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FM-80 VJ Display</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Scale canvas to fill screen while keeping 160:144 pixel-art ratio */
+    #vj-canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width:  min(100vw, calc(100vh * 160 / 144));
+      height: min(100vh, calc(100vw * 144 / 160));
+      display: block;
+    }
+
+    /* HUD overlay (bottom-right) */
+    #hud {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .style-btns {
+      display: flex;
+      gap: 5px;
+    }
+
+    .style-btn {
+      font-family: inherit;
+      font-size: 9px;
+      letter-spacing: 2px;
+      padding: 3px 8px;
+      background: rgba(15, 56, 15, 0.75);
+      border: 1px solid #306230;
+      color: #306230;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .style-btn:hover,
+    .style-btn.active {
+      color: #9bbc0f;
+      border-color: #8bac0f;
+      background: rgba(15, 56, 15, 0.9);
+    }
+
+    #status {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #306230;
+      background: rgba(15, 56, 15, 0.75);
+      padding: 3px 8px;
+      border: 1px solid #306230;
+      border-radius: 2px;
+      transition: color 0.4s, border-color 0.4s;
+    }
+    #status.connected {
+      color: #9bbc0f;
+      border-color: #8bac0f;
+    }
+
+    /* Hide HUD after 4s of no mouse movement */
+    #hud { transition: opacity 0.6s; }
+    #hud.hidden { opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<canvas id="vj-canvas"></canvas>
+
+<div id="hud">
+  <div class="style-btns">
+    <button class="style-btn active" data-style="digital">DIGITAL</button>
+    <button class="style-btn"        data-style="soft">SOFT</button>
+    <button class="style-btn"        data-style="art">ART</button>
+  </div>
+  <div id="status">CONNECTING...</div>
+</div>
+
+<script src="vj.js?v=4"></script>
+<script>
+  const canvas   = document.getElementById('vj-canvas');
+  const statusEl = document.getElementById('status');
+  const hud      = document.getElementById('hud');
+  const btns     = document.querySelectorAll('.style-btn');
+
+  // ── VJ display instance ─────────────────────────────────
+  const display = new VJDisplay(canvas);
+
+  // Apply ?style= URL param
+  const sp = new URLSearchParams(location.search).get('style');
+  if (sp) {
+    display.setStyle(sp);
+    btns.forEach(b => b.classList.toggle('active', b.dataset.style === sp));
+  }
+
+  display.start();
+
+  // ── Style buttons ───────────────────────────────────────
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      setStyle(btn.dataset.style);
+    });
+  });
+
+  function setStyle(s) {
+    display.setStyle(s);
+    btns.forEach(b => b.classList.toggle('active', b.dataset.style === s));
+  }
+
+  // Keyboard shortcuts: 1=DIGITAL 2=SOFT 3=ART
+  document.addEventListener('keydown', e => {
+    const map = { '1': 'digital', '2': 'soft', '3': 'art' };
+    if (map[e.key]) setStyle(map[e.key]);
+    // F = fullscreen toggle
+    if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  // Auto-hide HUD
+  let hudTimer;
+  function showHud() {
+    hud.classList.remove('hidden');
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => hud.classList.add('hidden'), 4000);
+  }
+  document.addEventListener('mousemove', showHud);
+  document.addEventListener('touchstart', showHud);
+  showHud();
+
+  // ── WebSocket connection ────────────────────────────────
+  let ws;
+
+  function connectWS() {
+    ws = new WebSocket(`ws://${location.host}`);
+
+    ws.onopen = () => {
+      statusEl.textContent = 'CONNECTED';
+      statusEl.classList.add('connected');
+    };
+
+    ws.onclose = () => {
+      statusEl.textContent = 'RECONNECTING...';
+      statusEl.classList.remove('connected');
+      setTimeout(connectWS, 2000);
+    };
+
+    ws.onerror = () => {};
+
+    ws.onmessage = e => {
+      try {
+        const ev = JSON.parse(e.data);
+        switch (ev.t) {
+          case 'step':  display.onStep(ev.s);    break;
+          case 'kick':  display.onKick();         break;
+          case 'snare': display.onSnare();        break;
+          case 'note':  display.onNote(ev.m);     break;
+          case 'style': setStyle(ev.s);           break;
+        }
+      } catch (_) {}
+    };
+  }
+
+  connectWS();
+</script>
+</body>
+</html>

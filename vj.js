@@ -706,6 +706,39 @@ function initVJ() {
       styleBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       vjDisplay.setStyle(btn.dataset.style);
+      if (typeof vjRelay !== 'undefined') vjRelay.setStyle(btn.dataset.style);
     });
   });
 }
+
+// ── VJ Relay ────────────────────────────────────────────────
+// コントローラー側 (メインシンセページ) で音楽イベントを
+// WebSocket 経由で vj-display.html へ送信する。
+// HTTP サーバー経由でない場合 (file:// や GitHub Pages) は無効化。
+const vjRelay = (() => {
+  let ws = null;
+
+  function connect() {
+    if (location.protocol !== 'http:') return;  // HTTPS や file:// は接続しない
+    try {
+      ws = new WebSocket(`ws://${location.host}`);
+      ws.onclose = () => { ws = null; setTimeout(connect, 3000); };
+      ws.onerror = () => {};  // サーバーなしの場合は静かに失敗
+    } catch (_) {}
+  }
+
+  // ページロード後に接続試行
+  if (typeof window !== 'undefined') setTimeout(connect, 800);
+
+  function send(data) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(data));
+  }
+
+  return {
+    onStep:  s => send({ t: 'step', s }),
+    onKick:  () => send({ t: 'kick' }),
+    onSnare: () => send({ t: 'snare' }),
+    onNote:  m => send({ t: 'note', m }),
+    setStyle:s => send({ t: 'style', s }),
+  };
+})();

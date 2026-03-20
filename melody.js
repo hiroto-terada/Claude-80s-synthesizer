@@ -94,6 +94,7 @@ class MelodyTrack {
         if (ev.type === 'on') {
           this._synth.noteOn(ev.midi);
           if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onNote(ev.midi);
+          if (typeof vjRelay !== 'undefined') vjRelay.onNote(ev.midi);
         } else {
           this._synth.noteOff(ev.midi);
         }

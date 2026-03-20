@@ -173,8 +173,8 @@ class Sequencer {
 
     if (this.drumEnabled && typeof drumSynth !== 'undefined' && drumSynth) {
       const ds = this.drumSteps, s = this.currentStep;
-      if (ds.kick[s])    { drumSynth.playKick();      if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onKick(); }
-      if (ds.snare[s])   { drumSynth.playSnare();     if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onSnare(); }
+      if (ds.kick[s])    { drumSynth.playKick();      if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onKick();  if (typeof vjRelay !== 'undefined') vjRelay.onKick(); }
+      if (ds.snare[s])   { drumSynth.playSnare();     if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onSnare(); if (typeof vjRelay !== 'undefined') vjRelay.onSnare(); }
       if (ds.hihat[s])   drumSynth.playHihat();
       if (ds.openhat[s]) drumSynth.playOpenHihat();
       if (ds.clap[s])    drumSynth.playClap();
@@ -189,6 +189,7 @@ class Sequencer {
     // VJ ディスプレイ (メインシーケンサーのみ駆動)
     if (this === sequencer && typeof vjDisplay !== 'undefined' && vjDisplay) {
       vjDisplay.onStep(this.currentStep);
+      if (typeof vjRelay !== 'undefined') vjRelay.onStep(this.currentStep);
     }
 
     this._highlightStep(this.currentStep);
