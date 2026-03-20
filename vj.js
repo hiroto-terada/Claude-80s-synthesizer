@@ -735,10 +735,14 @@ const vjRelay = (() => {
   }
 
   return {
-    onStep:  s => send({ t: 'step', s }),
-    onKick:  () => send({ t: 'kick' }),
-    onSnare: () => send({ t: 'snare' }),
-    onNote:  m => send({ t: 'note', m }),
-    setStyle:s => send({ t: 'style', s }),
+    onStep:   s              => send({ t: 'step', s }),
+    onKick:   ()             => send({ t: 'kick' }),
+    onSnare:  ()             => send({ t: 'snare' }),
+    onNote:   m              => send({ t: 'note', m }),
+    setStyle: s              => send({ t: 'style', s }),
+    onDrum:   d              => send({ t: 'drum', d }),
+    onBass:   (seq, midi, dur) => send({ t: 'bass', seq, midi, dur }),
+    onChord:  notes          => send({ t: 'chord', notes }),
+    onPreset: name           => send({ t: 'preset', name }),
   };
 })();

@@ -95,6 +95,7 @@ class ChordSequencer {
           this._offAll();
           midis.forEach(m => this._synth.noteOn(m));
           this._playingMidis = [...midis];
+          if (typeof vjRelay !== 'undefined') vjRelay.onChord(midis);
         }
       } else {
         // Inactive / empty step — cut notes

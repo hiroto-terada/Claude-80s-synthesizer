@@ -293,6 +293,7 @@ function initPresets() {
       if (synth) {
         synth.setPatch(btn.dataset.preset);
         syncKnobsToSynth();
+        if (typeof vjRelay !== 'undefined') vjRelay.onPreset(btn.dataset.preset);
       }
     });
   });

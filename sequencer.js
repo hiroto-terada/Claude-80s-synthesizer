@@ -164,6 +164,7 @@ class Sequencer {
       this._bassSynth.allNotesOff();
       if (step.active) {
         this._bassSynth.noteOn(step.midi);
+        if (typeof vjRelay !== 'undefined') vjRelay.onBass(this._prefix, step.midi, this.stepMs * 0.8);
         const noteOff = step.midi;
         setTimeout(() => {
           if (this._bassSynth) this._bassSynth.noteOff(noteOff);
@@ -175,10 +176,10 @@ class Sequencer {
       const ds = this.drumSteps, s = this.currentStep;
       if (ds.kick[s])    { drumSynth.playKick();      if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onKick();  if (typeof vjRelay !== 'undefined') vjRelay.onKick(); }
       if (ds.snare[s])   { drumSynth.playSnare();     if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onSnare(); if (typeof vjRelay !== 'undefined') vjRelay.onSnare(); }
-      if (ds.hihat[s])   drumSynth.playHihat();
-      if (ds.openhat[s]) drumSynth.playOpenHihat();
-      if (ds.clap[s])    drumSynth.playClap();
-      if (ds.cowbell[s]) drumSynth.playCowbell();
+      if (ds.hihat[s])   { drumSynth.playHihat();      if (typeof vjRelay !== 'undefined') vjRelay.onDrum('hihat'); }
+      if (ds.openhat[s]) { drumSynth.playOpenHihat();   if (typeof vjRelay !== 'undefined') vjRelay.onDrum('openhat'); }
+      if (ds.clap[s])    { drumSynth.playClap();        if (typeof vjRelay !== 'undefined') vjRelay.onDrum('clap'); }
+      if (ds.cowbell[s]) { drumSynth.playCowbell();     if (typeof vjRelay !== 'undefined') vjRelay.onDrum('cowbell'); }
     }
 
     // メロディトラック (メインシーケンサーのみ駆動)
