@@ -22,11 +22,10 @@ class VJDisplay {
     this.kick   = 0;
     this.snare  = 0;
     this._raf   = null;
+    this._glitch = 0;
 
-    // Pixel robot state
-    this._robotY   = 0;
-    this._robotVY  = 0;
-    this._robotX   = 0;
+    // DIGITAL mode: 3D blocks spawned by notes
+    this._blocks = [];
 
     // Soft mode blob state
     this._blobs = Array.from({ length: 5 }, () => ({
@@ -39,7 +38,6 @@ class VJDisplay {
     // Art mode state
     this._artAngle   = 0;
     this._artPalette = 0;
-    this._glitch     = 0;
 
     // Stars for SOFT mode
     this._stars = Array.from({ length: 30 }, () => ({
@@ -57,14 +55,30 @@ class VJDisplay {
   }
   onKick()  { this.kick  = 10; }
   onSnare() { this.snare = 6;  this._glitch = 4; }
+
+  // Called when a melody/chord/keyboard note is triggered
+  onNote(midi) {
+    // Pitch → horizontal world position (C4=60 → center, ±1 octave = ±gSize*1.5)
+    const worldX = ((midi - 60) / 12) * 48;
+    // Spawn block with slight Z jitter so chords spread
+    this._blocks.push({
+      x:     worldX + (Math.random() - 0.5) * 6,
+      z:     190 + Math.random() * 30,
+      size:  5 + (midi % 12) * 0.6,   // semitone within octave → size variation
+      speed: 2.2 + Math.random() * 0.8,
+      col:   midi % 3,                  // 0=G1 far, 1=G2 mid, 2=G3 near tint
+    });
+    if (this._blocks.length > 20) this._blocks.shift();
+  }
+
   setStyle(s) { this.style = s; }
 
   _loop() {
     this._raf = requestAnimationFrame(() => this._loop());
     this.frame++;
 
-    if (this.kick  > 0) this.kick--;
-    if (this.snare > 0) this.snare--;
+    if (this.kick   > 0) this.kick--;
+    if (this.snare  > 0) this.snare--;
     if (this._glitch > 0) this._glitch--;
 
     switch (this.style) {
@@ -75,136 +89,182 @@ class VJDisplay {
   }
 
   // ────────────────────────────────────────────────────────
-  // DIGITAL — grid world pixel art
+  // DIGITAL — pseudo-3D Game Boy highway
   // ────────────────────────────────────────────────────────
   _renderDigital() {
-    const { ctx, W, H, kick, beat, frame } = this;
-    // Auto-advance step when sequencer is idle (for visual idle animation)
+    const { ctx, W, H, frame, kick, snare } = this;
     const step = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
 
-    // Background
-    ctx.fillStyle = '#0a0a14';
+    // Game Boy 4-color palette
+    const G0 = '#0f380f';  // darkest
+    const G1 = '#306230';  // dark
+    const G2 = '#8bac0f';  // light
+    const G3 = '#9bbc0f';  // lightest / highlight
+
+    const hy    = 54;          // horizon Y (≈37% of 144)
+    const vpX   = W >> 1;      // vanishing point X = 80
+    const fov   = 55;          // perspective focal length
+    const gH    = H - 12 - hy; // usable ground height (78px)
+    const gSize = 40;           // world grid cell size
+    const scrollZ = frame * 1.6;
+
+    // ── CLEAR ──────────────────────────────────────────────
+    ctx.fillStyle = G0;
     ctx.fillRect(0, 0, W, H);
 
-    // Scrolling sub-grid lines (thin, slow scroll)
-    const scroll = (frame * 0.5) % 8;
-    ctx.strokeStyle = '#1e2a3a';
+    // ── SKY: dithered G0 → G1 bands ───────────────────────
+    // Use alternating rows to create 2×2 dither gradient
+    for (let y = 0; y < hy; y++) {
+      const t = y / hy;  // 0=top, 1=horizon
+      // Dither threshold: above 0.5 mix G1 on even rows, above 0.75 always G1
+      if (t > 0.75 || (t > 0.45 && (y & 1) === 0)) {
+        ctx.fillStyle = G1;
+        ctx.fillRect(0, y, W, 1);
+      }
+    }
+
+    // ── SKYLINE BUILDINGS (slow scroll) ────────────────────
+    const bscroll = (frame * 0.25) % 320;
+    // Building data: [width, height] pairs repeating
+    const bld = [14,14, 10,20, 16,10, 12,18, 8,22, 18,12, 11,16, 14,8, 9,19, 15,14];
+    ctx.fillStyle = G1;
+    for (let i = 0; i < 20; i++) {
+      const d = bld[(i % bld.length >> 1) * 2] !== undefined ? bld : bld;
+      const bw = bld[(i * 2) % bld.length];
+      const bh = bld[(i * 2 + 1) % bld.length];
+      const bx = ((i * 16 - bscroll + 320) % 320) - 16;
+      ctx.fillRect(bx, hy - bh, bw, bh);
+      // Window lights (G2)
+      ctx.fillStyle = G2;
+      for (let wy = hy - bh + 3; wy < hy - 2; wy += 5) {
+        for (let wx = bx + 2; wx < bx + bw - 1; wx += 4) {
+          if (Math.sin(i * 13 + wy * 5 + frame * 0.04) > 0.25) {
+            ctx.fillRect(wx, wy, 2, 2);
+          }
+        }
+      }
+      ctx.fillStyle = G1;
+    }
+
+    // ── HORIZON LINE ───────────────────────────────────────
+    ctx.fillStyle = kick > 0 ? G3 : G2;
+    ctx.fillRect(0, hy - 1, W, kick > 0 ? 2 : 1);
+
+    // ── 3D GROUND BASE ─────────────────────────────────────
+    ctx.fillStyle = G0;
+    ctx.fillRect(0, hy, W, gH);
+
+    // Per-scanline: alternating row shading (depth checkerboard)
+    for (let y = hy; y < hy + gH; y++) {
+      const t = (y - hy + 0.5) / gH;  // 0 horizon, 1 near
+      const worldZ = (fov / t) - scrollZ;
+      if (Math.floor(worldZ / gSize) & 1) {
+        ctx.fillStyle = G1;
+        ctx.fillRect(0, y, W, 1);
+      }
+    }
+
+    // Horizontal grid lines (perspective-correct, scrolling)
+    for (let n = 0; n < 30; n++) {
+      const wz = n * gSize - (scrollZ % gSize);
+      if (wz <= 1) continue;
+      const t = fov / wz;
+      if (t >= 1.0) continue;
+      if (t < 0.02) break;
+      const y = Math.round(hy + t * gH);
+      if (y < hy || y >= hy + gH) continue;
+      ctx.fillStyle = t > 0.5 ? G2 : G1;
+      ctx.fillRect(0, y, W, 1);
+    }
+
+    // Vertical grid lines (all converge to vanishing point)
     ctx.lineWidth = 1;
-    for (let x = -8 + scroll; x < W; x += 8) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - 14); ctx.stroke();
-    }
-    for (let y = (frame * 0.25) % 8; y < H - 14; y += 8) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    for (let col = -2; col <= 2; col++) {
+      const bx = vpX + col * gSize;
+      ctx.strokeStyle = col === 0 ? G2 : G1;
+      ctx.beginPath();
+      ctx.moveTo(vpX, hy);
+      ctx.lineTo(bx, hy + gH);
+      ctx.stroke();
     }
 
-    // 4×4 macro grid cells (each cell = 40×32.5 px, showing 16 steps)
-    const cellW = W / 4;
-    const cellH = (H - 14) / 4;
+    // ── 3D BLOCKS (notes flying toward viewer) ──────────────
+    const GB = [G1, G2, G3];
+    // Draw far-to-near so closer blocks paint over distant ones
+    const sorted = this._blocks.slice().sort((a, b) => b.z - a.z);
+    for (const b of sorted) {
+      b.z -= b.speed;
+      if (b.z < 4) continue;
 
+      const t  = Math.min(fov / b.z, 1.0);
+      if (t < 0.03) continue;
+
+      const sx  = Math.round(vpX + b.x * t);
+      const sy  = Math.round(hy + t * gH);  // ground contact point
+      const bw  = Math.max(2, Math.round(t * b.size));
+      const bh  = Math.max(2, Math.round(t * b.size * 2.5));
+      const lx  = sx - (bw >> 1);
+
+      if (sy > hy + gH + 6 || sx < -bw - 4 || sx > W + bw + 4) continue;
+
+      // Depth-based color: far=col tint, mid=G2, near=G3
+      const shade = t > 0.65 ? G3 : t > 0.3 ? G2 : GB[b.col];
+      ctx.fillStyle = shade;
+      ctx.fillRect(lx, sy - bh, bw, bh);
+
+      // Top highlight edge
+      ctx.fillStyle = G3;
+      ctx.fillRect(lx, sy - bh, bw, 1);
+      // Left edge darker (fake side face)
+      ctx.fillStyle = G1;
+      ctx.fillRect(lx, sy - bh + 1, 1, bh - 1);
+
+      // Ground shadow
+      if (t > 0.25) {
+        ctx.fillStyle = G1;
+        ctx.fillRect(lx - 1, sy, bw + 2, 1);
+      }
+    }
+    // Remove expired blocks
+    for (let i = this._blocks.length - 1; i >= 0; i--) {
+      if (this._blocks[i].z < 4) this._blocks.splice(i, 1);
+    }
+
+    // ── KICK SHOCKWAVE RINGS ────────────────────────────────
+    if (kick > 0) {
+      const kt = (10 - kick) / 10;  // expands 0→1 during kick decay
+      for (let ring = 0; ring < 3; ring++) {
+        const rt = kt - ring * 0.15;
+        if (rt < 0 || rt > 1) continue;
+        const ry = Math.round(hy + rt * gH);
+        if (ry >= hy && ry < hy + gH) {
+          ctx.fillStyle = ring === 0 ? G3 : G2;
+          ctx.fillRect(0, ry, W, 1);
+        }
+      }
+    }
+
+    // ── SNARE SCANLINE FLASH ────────────────────────────────
+    if (snare > 4) {
+      const sy2 = Math.floor(Math.random() * (hy - 4));
+      ctx.fillStyle = G2;
+      ctx.fillRect(0, sy2, W, 1);
+    }
+
+    // ── HUD BAR ─────────────────────────────────────────────
+    ctx.fillStyle = '#0a1a0a';
+    ctx.fillRect(0, H - 12, W, 12);
     for (let i = 0; i < 16; i++) {
-      const col = i % 4;
-      const row = Math.floor(i / 4);
-      const cx  = col * cellW;
-      const cy  = row * cellH;
+      const bx     = i * 10;
       const active = i === step;
       const isBeat = i % 4 === 0;
-
-      // Cell fill
-      if (isBeat) {
-        ctx.fillStyle = 'rgba(0,229,255,0.04)';
-        ctx.fillRect(cx + 1, cy + 1, cellW - 2, cellH - 2);
-      }
-      if (active) {
-        ctx.fillStyle = 'rgba(0,255,204,0.12)';
-        ctx.fillRect(cx + 1, cy + 1, cellW - 2, cellH - 2);
-      }
-
-      // Cell border
-      ctx.strokeStyle = active ? '#00ffcc' : isBeat ? '#2a4060' : '#1e2a40';
-      ctx.lineWidth   = active ? 1.5 : 0.5;
-      ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
+      ctx.fillStyle = active ? G3 : isBeat ? G2 : G1;
+      ctx.fillRect(bx + 1, H - 10, 8, active ? 9 : (isBeat ? 5 : 3));
     }
-
-    // Pixel robot — moves to active step's cell
-    const activeCol = step % 4;
-    const activeRow = Math.floor(step / 4);
-    const targetX   = activeCol * cellW + cellW / 2;
-    const targetY   = activeRow * cellH + cellH / 2;
-
-    // Smooth lerp toward target (init to targetX if not set)
-    if (this._robotX === 0) this._robotX = targetX;
-    this._robotX += (targetX - this._robotX) * 0.25;
-
-    // Jump on kick
-    if (kick === 10) { this._robotVY = -3.5; }
-    this._robotVY += 0.35;
-    this._robotY  += this._robotVY;
-    if (this._robotY > 0) { this._robotY = 0; this._robotVY = 0; }
-
-    const rx = Math.round(this._robotX);
-    const ry = Math.round(targetY + this._robotY);
-    this._drawRobot(rx, ry, kick > 0, beat % 2 === 0);
-
-    // Step indicator bar at bottom
-    ctx.fillStyle = '#0d1a2e';
-    ctx.fillRect(0, H - 14, W, 14);
-    for (let i = 0; i < 16; i++) {
-      const bx = i * 10;
-      const isActive = i === activeStep;
-      const isBeat   = i % 4 === 0;
-      ctx.fillStyle = isActive ? '#00ffcc'
-                    : isBeat   ? '#1e4a7e'
-                               : '#112236';
-      ctx.fillRect(bx + 1, H - 13, 8, 12);
-      if (isActive) {
-        // Bright pip
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(bx + 4, H - 10, 2, 2);
-      }
-    }
-
-    // Beat counter in top-right
-    const beatStr = ('000' + beat).slice(-3);
-    this._drawText(beatStr, W - 22, 2, '#00ffcc', 1);
-  }
-
-  _drawRobot(cx, cy, jumping, blink) {
-    const { ctx } = this;
-    const p = (x, y, w, h, c) => {
-      ctx.fillStyle = c;
-      ctx.fillRect(cx - 4 + x, cy - 12 + y, w, h);
-    };
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,255,204,0.15)';
-    ctx.fillRect(cx - 5, cy + 1, 10, 2);
-
-    // Body
-    p(0, 4, 8, 7, '#00cc99');
-    // Head
-    p(1, 0, 6, 5, '#00ffcc');
-    // Eyes
-    p(2, 1, 2, 2, blink ? '#0a0a14' : '#ffffff');
-    p(5, 1, 1, 2, blink ? '#0a0a14' : '#ffffff');
-    // Antenna
-    p(3, -2, 1, 2, '#00ffcc');
-    p(2, -3, 3, 1, '#00ffcc');
-    // Legs
-    if (jumping) {
-      p(1, 11, 2, 2, '#009977');
-      p(5, 11, 2, 2, '#009977');
-    } else {
-      const legOff = Math.floor(this.frame / 6) % 2;
-      p(1, 11, 2, 3 - legOff, '#009977');
-      p(5, 11, 2, 2 + legOff, '#009977');
-    }
-    // Arms
-    p(-1, 5, 2, 3, '#009977');
-    p(7, 5, 2, 3, '#009977');
+    this._drawText(('000' + this.beat).slice(-3), W - 22, H - 11, G3, 1);
   }
 
   _drawText(str, x, y, color, scale = 1) {
-    // Minimal 3×5 pixel font (digits + letters)
     const { ctx } = this;
     ctx.fillStyle = color;
     const glyphs = {
@@ -301,7 +361,6 @@ class VJDisplay {
 
     this._artAngle += 0.015 + (kick > 0 ? 0.05 : 0);
 
-    // Palette cycles per beat
     const palettes = [
       ['#ff0077', '#00ffff', '#ffff00'],
       ['#ff6600', '#00ff99', '#cc00ff'],
@@ -310,7 +369,6 @@ class VJDisplay {
     ];
     const pal = palettes[beat % palettes.length];
 
-    // Rotating rectangles
     const cx = W / 2, cy = H / 2 - 4;
     const sizes = [16, 28, 42, 56, 70];
     for (let i = 0; i < sizes.length; i++) {
@@ -330,22 +388,16 @@ class VJDisplay {
       ctx.globalAlpha = 1;
     }
 
-    // Centre pixel burst on kick
     if (kick > 0) {
       const spread = kick * 3;
       ctx.fillStyle = pal[0];
       for (let n = 0; n < 30; n++) {
         const ang2 = Math.random() * Math.PI * 2;
         const dist = Math.random() * spread;
-        ctx.fillRect(
-          Math.round(cx + Math.cos(ang2) * dist),
-          Math.round(cy + Math.sin(ang2) * dist),
-          1, 1
-        );
+        ctx.fillRect(Math.round(cx + Math.cos(ang2) * dist), Math.round(cy + Math.sin(ang2) * dist), 1, 1);
       }
     }
 
-    // Glitch slices on snare
     if (_glitch > 0) {
       const numSlices = 3 + (_glitch > 2 ? 3 : 0);
       for (let s = 0; s < numSlices; s++) {
@@ -359,7 +411,6 @@ class VJDisplay {
       }
     }
 
-    // Step indicator: pixelated bar top edge
     const activeStep = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
     for (let i = 0; i < 16; i++) {
       const bx = i * 10;
@@ -368,17 +419,15 @@ class VJDisplay {
       ctx.fillRect(bx, H - 10, 9, active ? 10 : 4);
     }
 
-    // Beat number top-left
     this._drawText(('00' + beat).slice(-3), 2, 2, pal[2], 1);
   }
 }
 
 // ── UI 初期化 ──────────────────────────────────────────────
 function initVJ() {
-  const wrap     = document.getElementById('vj-wrap');
-  const section  = document.getElementById('vj-section');
+  const section   = document.getElementById('vj-section');
   const toggleBtn = document.getElementById('vj-toggle-btn');
-  const canvas   = document.getElementById('vj-canvas');
+  const canvas    = document.getElementById('vj-canvas');
   const styleBtns = document.querySelectorAll('.vj-style-btn');
 
   if (!canvas) return;

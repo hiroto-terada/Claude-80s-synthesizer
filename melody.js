@@ -91,8 +91,12 @@ class MelodyTrack {
     this._playbackTimers = this.events.map(ev =>
       setTimeout(() => {
         if (!this.enabled || !this._synth) return;
-        if (ev.type === 'on') this._synth.noteOn(ev.midi);
-        else                  this._synth.noteOff(ev.midi);
+        if (ev.type === 'on') {
+          this._synth.noteOn(ev.midi);
+          if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onNote(ev.midi);
+        } else {
+          this._synth.noteOff(ev.midi);
+        }
       }, ev.time)
     );
   }
