@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>FM-80 Synthesizer</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <!-- Swipe handle (right edge) -->
@@ -335,14 +335,14 @@
 <!-- VJ Display -->
 <div id="vj-wrap">
   <button id="vj-toggle-btn">VJ ▼</button>
-  <section id="vj-section">
+  <div id="vj-section">
     <canvas id="vj-canvas"></canvas>
     <div class="vj-controls">
       <button class="vj-style-btn active" data-style="digital">DIGITAL</button>
       <button class="vj-style-btn" data-style="soft">SOFT</button>
       <button class="vj-style-btn" data-style="art">ART</button>
     </div>
-  </section>
+  </div>
 </div>
 
 </div><!-- #app -->
@@ -361,7 +361,7 @@
 <script src="chord.js"></script>
 <script src="drum.js"></script>
 <script src="melody.js"></script>
-<script src="vj.js"></script>
+<script src="vj.js?v=3"></script>
 <script src="ui.js"></script>
 </body>
 </html>
