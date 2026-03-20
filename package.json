@@ -1,0 +1,11 @@
+{
+  "name": "fm80-synthesizer",
+  "version": "1.0.0",
+  "description": "FM-80 80s Synthesizer with VJ Display",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

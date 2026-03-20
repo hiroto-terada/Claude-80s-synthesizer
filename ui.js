@@ -198,6 +198,7 @@ function addKeyHandlers(el, midi, label) {
     el.classList.add('active');
     synth.noteOn(midi);
     if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onNote(midi);
+    if (typeof vjRelay !== 'undefined') vjRelay.onNote(midi);
     recMidi = midi; // update record buffer
     if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOn(midi);
     if (activeWriteSeq) assignWriteStep(midi);
@@ -231,6 +232,7 @@ function initPCKeyboard() {
     const midi = noteNameToMidi(note + oct);
     synth.noteOn(midi);
     if (typeof vjDisplay !== 'undefined' && vjDisplay) vjDisplay.onNote(midi);
+    if (typeof vjRelay !== 'undefined') vjRelay.onNote(midi);
     recMidi = midi; // update record buffer
     if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOn(midi);
     if (activeWriteSeq) assignWriteStep(midi);
