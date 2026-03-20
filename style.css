@@ -1203,22 +1203,23 @@ header {
 #vj-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 #vj-section {
-  display: none;
+  display: none !important;
   flex-direction: column;
   align-items: center;
   gap: 6px;
 }
-#vj-section.open { display: flex; }
+#vj-section.open { display: flex !important; }
 
 #vj-canvas {
   width: 320px;
   height: 288px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  border: 1px solid var(--border);
+  border: 2px solid var(--accent);
   border-radius: 3px;
-  background: #000;
+  background: #0a0a14;
   max-width: 100%;
+  display: block;
 }
 
 .vj-controls {

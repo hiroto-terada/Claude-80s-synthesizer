@@ -78,7 +78,9 @@ class VJDisplay {
   // DIGITAL — grid world pixel art
   // ────────────────────────────────────────────────────────
   _renderDigital() {
-    const { ctx, W, H, step, kick, beat, frame } = this;
+    const { ctx, W, H, kick, beat, frame } = this;
+    // Auto-advance step when sequencer is idle (for visual idle animation)
+    const step = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
 
     // Background
     ctx.fillStyle = '#0a0a14';
@@ -86,7 +88,7 @@ class VJDisplay {
 
     // Scrolling sub-grid lines (thin, slow scroll)
     const scroll = (frame * 0.5) % 8;
-    ctx.strokeStyle = '#1a1a2e';
+    ctx.strokeStyle = '#1e2a3a';
     ctx.lineWidth = 1;
     for (let x = -8 + scroll; x < W; x += 8) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - 14); ctx.stroke();
@@ -98,35 +100,39 @@ class VJDisplay {
     // 4×4 macro grid cells (each cell = 40×32.5 px, showing 16 steps)
     const cellW = W / 4;
     const cellH = (H - 14) / 4;
-    const activeStep = step < 0 ? 0 : step;
 
     for (let i = 0; i < 16; i++) {
       const col = i % 4;
       const row = Math.floor(i / 4);
       const cx  = col * cellW;
       const cy  = row * cellH;
-      const active = i === activeStep;
+      const active = i === step;
+      const isBeat = i % 4 === 0;
 
-      // Cell border
-      ctx.strokeStyle = active ? '#00ffcc' : '#1e3a5f';
-      ctx.lineWidth   = active ? 1.5 : 0.5;
-      ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
-
-      // Active cell fill
-      if (active) {
-        ctx.fillStyle = 'rgba(0,255,204,0.07)';
+      // Cell fill
+      if (isBeat) {
+        ctx.fillStyle = 'rgba(0,229,255,0.04)';
         ctx.fillRect(cx + 1, cy + 1, cellW - 2, cellH - 2);
       }
+      if (active) {
+        ctx.fillStyle = 'rgba(0,255,204,0.12)';
+        ctx.fillRect(cx + 1, cy + 1, cellW - 2, cellH - 2);
+      }
+
+      // Cell border
+      ctx.strokeStyle = active ? '#00ffcc' : isBeat ? '#2a4060' : '#1e2a40';
+      ctx.lineWidth   = active ? 1.5 : 0.5;
+      ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
     }
 
     // Pixel robot — moves to active step's cell
-    const activeCol = activeStep % 4;
-    const activeRow = Math.floor(activeStep / 4);
+    const activeCol = step % 4;
+    const activeRow = Math.floor(step / 4);
     const targetX   = activeCol * cellW + cellW / 2;
     const targetY   = activeRow * cellH + cellH / 2;
 
-    // Smooth lerp toward target
-    this._robotX = this._robotX || targetX;
+    // Smooth lerp toward target (init to targetX if not set)
+    if (this._robotX === 0) this._robotX = targetX;
     this._robotX += (targetX - this._robotX) * 0.25;
 
     // Jump on kick
@@ -267,7 +273,7 @@ class VJDisplay {
     }
 
     // Step dots at bottom (soft)
-    const activeStep = this.step < 0 ? 0 : this.step;
+    const activeStep = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
     for (let i = 0; i < 16; i++) {
       const dotX = 8 + i * 9;
       const dotY = H - 8;
@@ -354,7 +360,7 @@ class VJDisplay {
     }
 
     // Step indicator: pixelated bar top edge
-    const activeStep = this.step < 0 ? 0 : this.step;
+    const activeStep = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
     for (let i = 0; i < 16; i++) {
       const bx = i * 10;
       const active = i === activeStep;
