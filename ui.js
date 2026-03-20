@@ -137,6 +137,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   initDrums();
   drumSynth.setSidechain([bassSynth.masterGain, bassSynth2.masterGain]);
   initRecorder();
+  if (typeof initVJ === 'function') initVJ();
 });
 
 // ── Piano Keyboard ────────────────────────────────────────
