@@ -33,6 +33,17 @@ class VJDisplay {
     this._carTimer  = 60 + Math.floor(Math.random() * 80);
     this._noiseTimer = 240 + Math.floor(Math.random() * 200);
 
+    // DIGITAL mode: stars + shooting stars
+    // Fixed star positions with individual twinkle seeds
+    this._dStars = Array.from({ length: 28 }, () => ({
+      x:    2 + Math.floor(Math.random() * 156),
+      y:    2 + Math.floor(Math.random() * 38),   // upper sky only
+      seed: Math.random() * Math.PI * 2,
+      rate: 0.04 + Math.random() * 0.06,          // twinkle speed
+    }));
+    this._shootingStars  = [];
+    this._shootTimer     = 180 + Math.floor(Math.random() * 280);
+
     // Soft mode blob state
     this._blobs = Array.from({ length: 5 }, () => ({
       x: Math.random() * 160, y: Math.random() * 144,
@@ -130,6 +141,54 @@ class VJDisplay {
       if (t > 0.75 || (t > 0.45 && (y & 1) === 0)) {
         ctx.fillStyle = G1;
         ctx.fillRect(0, y, W, 1);
+      }
+    }
+
+    // ── STARS (fixed, twinkling) ────────────────────────────
+    for (const s of this._dStars) {
+      const bright = Math.sin(frame * s.rate + s.seed);
+      if (bright > 0.1) {
+        ctx.fillStyle = bright > 0.7 ? G3 : G2;
+        ctx.fillRect(s.x, s.y, 1, 1);
+      }
+    }
+
+    // ── SHOOTING STARS ──────────────────────────────────────
+    if (--this._shootTimer <= 0) {
+      // Spawn from top-left quadrant, travel toward bottom-right at varying angles
+      const side = Math.random() < 0.5;  // left half or right half start
+      this._shootingStars.push({
+        x:    side ? Math.random() * 60 : 60 + Math.random() * 60,
+        y:    1 + Math.random() * 20,
+        dx:   1.8 + Math.random() * 2.2,
+        dy:   0.4 + Math.random() * 0.8,
+        life: 28 + Math.floor(Math.random() * 22),
+        maxLife: 0,
+      });
+      const ss = this._shootingStars[this._shootingStars.length - 1];
+      ss.maxLife = ss.life;
+      this._shootTimer = 200 + Math.floor(Math.random() * 320);
+    }
+
+    for (let i = this._shootingStars.length - 1; i >= 0; i--) {
+      const ss = this._shootingStars[i];
+      ss.x += ss.dx;
+      ss.y += ss.dy;
+      ss.life--;
+
+      if (ss.life <= 0 || ss.x > W || ss.y > hy - 2) {
+        this._shootingStars.splice(i, 1);
+        continue;
+      }
+
+      // Trail: draw from head back, fading G3 → G2 → G1
+      const trailLen = 7;
+      for (let t2 = 0; t2 < trailLen; t2++) {
+        const tx = Math.round(ss.x - ss.dx * t2 * 0.7);
+        const ty2 = Math.round(ss.y - ss.dy * t2 * 0.7);
+        if (tx < 0 || ty2 < 0 || ty2 >= hy) continue;
+        ctx.fillStyle = t2 === 0 ? G3 : t2 < 3 ? G2 : G1;
+        ctx.fillRect(tx, ty2, 1, 1);
       }
     }
 
