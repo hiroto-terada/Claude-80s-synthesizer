@@ -196,6 +196,7 @@ function initDrums() {
     sequencer.drumEnabled = !sequencer.drumEnabled;
     toggleBtn.textContent = sequencer.drumEnabled ? 'ON' : 'OFF';
     toggleBtn.classList.toggle('active', sequencer.drumEnabled);
+    if (typeof vjRelay !== 'undefined') vjRelay.onDrumEnable(sequencer.drumEnabled);
   });
 
   DRUM_TRACKS.forEach(track => {
@@ -218,6 +219,7 @@ function initDrums() {
       btn.addEventListener('click', () => {
         const on = sequencer.drumSteps[track.key][i] = !sequencer.drumSteps[track.key][i];
         btn.classList.toggle('active', on);
+        if (typeof vjRelay !== 'undefined') vjRelay.onDrumUpdate(sequencer.drumSteps);
       });
       row.appendChild(btn);
     }

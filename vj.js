@@ -749,5 +749,10 @@ const vjRelay = (() => {
       send({ t: 'pc_play', bpm, seq1, seq2, drums, drumEnabled, chord }),
     onStop: () => send({ t: 'pc_stop' }),
     onBpm:  bpm => send({ t: 'pc_bpm', bpm }),
+    // Live pattern updates during playback (pattern bank switch, drum edits)
+    onSeqUpdate:   (seq, steps) => send({ t: 'pc_seq_update', seq, steps }),
+    onChordUpdate: steps        => send({ t: 'pc_chord_update', steps }),
+    onDrumUpdate:  drums        => send({ t: 'pc_drum_update', drums }),
+    onDrumEnable:  enabled      => send({ t: 'pc_drum_enable', enabled }),
   };
 })();

@@ -154,6 +154,10 @@ class Sequencer {
       });
       if (typeof this._pendingPattern.onApply === 'function') this._pendingPattern.onApply();
       this._pendingPattern = null;
+      // Notify PC sequencer so it switches pattern at the same loop boundary
+      if (typeof vjRelay !== 'undefined') {
+        vjRelay.onSeqUpdate(this._prefix, this.steps.map(s => ({ midi: s.midi, active: s.active })));
+      }
     }
 
     if (this._metronomeOn && this.currentStep % 4 === 0) {

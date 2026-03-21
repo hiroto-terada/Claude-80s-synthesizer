@@ -82,6 +82,10 @@ class ChordSequencer {
       });
       if (typeof this._pendingPattern.onApply === 'function') this._pendingPattern.onApply();
       this._pendingPattern = null;
+      // Notify PC sequencer so chord pattern switches at same loop boundary
+      if (typeof vjRelay !== 'undefined') {
+        vjRelay.onChordUpdate(this.steps.map(s => ({ active: s.active, chord: s.chord })));
+      }
     }
 
     const step = this.steps[this.currentStep];
