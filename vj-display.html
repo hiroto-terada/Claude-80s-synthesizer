@@ -310,7 +310,10 @@
       case 'note':
         if (!pcAudioReady) return;
         pcMelody.noteOn(ev.m);
-        setTimeout(() => pcMelody.noteOff(ev.m), 300);
+        return;
+      case 'noteoff':
+        if (!pcAudioReady) return;
+        pcMelody.noteOff(ev.m);
         return;
       case 'preset':
         if (pcAudioReady && pcMelody) pcMelody.setPatch(ev.name);
