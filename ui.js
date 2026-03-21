@@ -209,6 +209,7 @@ function addKeyHandlers(el, midi, label) {
   const off = () => {
     el.classList.remove('active');
     if (synth) synth.noteOff(midi);
+    if (typeof vjRelay !== 'undefined') vjRelay.onNoteOff(midi);
     if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOff(midi);
   };
 
@@ -248,6 +249,7 @@ function initPCKeyboard() {
     if (note.endsWith('+')) { note = note.slice(0, -1); oct++; }
     const midi = noteNameToMidi(note + oct);
     synth.noteOff(midi);
+    if (typeof vjRelay !== 'undefined') vjRelay.onNoteOff(midi);
     if (typeof melodyTrack !== 'undefined' && melodyTrack) melodyTrack.recordNoteOff(midi);
     const el = document.querySelector(`[data-midi="${midi}"]`);
     if (el) el.classList.remove('active');
