@@ -105,6 +105,8 @@
     <button class="style-btn active" data-style="digital">DIGITAL</button>
     <button class="style-btn"        data-style="soft">SOFT</button>
     <button class="style-btn"        data-style="art">ART</button>
+    <button class="style-btn"        data-style="matrix">MATRIX</button>
+    <button class="style-btn"        data-style="scope">SCOPE</button>
   </div>
   <button id="audio-btn">♪ ENABLE AUDIO</button>
   <div id="status">CONNECTING...</div>
@@ -156,6 +158,10 @@
       this.drumSteps  = null;
       this.drumEnabled = false;
       this.chordSteps = [];
+      // Pending patterns — applied at next step 0 (same as iPhone _pendingPattern)
+      this._pendingSeq1  = null;
+      this._pendingSeq2  = null;
+      this._pendingChord = null;
     }
 
     start(data) {
@@ -177,6 +183,9 @@
       if (this._timerId) { clearTimeout(this._timerId); this._timerId = null; }
       this._prevChordMidis.forEach(m => this.chordSynth.noteOff(m));
       this._prevChordMidis = [];
+      this._pendingSeq1 = null;
+      this._pendingSeq2 = null;
+      this._pendingChord = null;
     }
 
     updateBpm(bpm) { this.stepSec = (60 / bpm) / 4; }
@@ -194,6 +203,13 @@
     }
 
     _scheduleStep(s, when) {
+      // Apply queued pattern updates at loop start — mirrors iPhone _pendingPattern behaviour
+      if (s === 0) {
+        if (this._pendingSeq1)  { this.seq1Steps  = this._pendingSeq1;  this._pendingSeq1  = null; }
+        if (this._pendingSeq2)  { this.seq2Steps  = this._pendingSeq2;  this._pendingSeq2  = null; }
+        if (this._pendingChord) { this.chordSteps = this._pendingChord; this._pendingChord = null; }
+      }
+
       // Drums
       if (this.drumEnabled && this.drumSteps) {
         const ds = this.drumSteps;
@@ -334,12 +350,15 @@
       // ── Live pattern updates during playback ────────────
       case 'pc_seq_update':
         if (pcAudioReady && pcSeqActive) {
-          if (ev.seq === 'seq2') pcSequencer.seq2Steps = ev.steps;
-          else                   pcSequencer.seq1Steps = ev.steps;
+          // Queue for next step-0 boundary — same timing as iPhone's pending pattern
+          if (ev.seq === 'seq2') pcSequencer._pendingSeq2  = ev.steps;
+          else                   pcSequencer._pendingSeq1  = ev.steps;
         }
+        // Cycle VJ scene on every pattern bank switch
+        cycleScene();
         return;
       case 'pc_chord_update':
-        if (pcAudioReady && pcSeqActive) pcSequencer.chordSteps = ev.steps;
+        if (pcAudioReady && pcSeqActive) pcSequencer._pendingChord = ev.steps;
         return;
       case 'pc_drum_update':
         if (pcAudioReady && pcSeqActive) pcSequencer.drumSteps = ev.drums;
@@ -394,6 +413,14 @@
   // ── VJ display instance ─────────────────────────────────
   const display = new VJDisplay(canvas);
 
+  // ── Scene auto-cycling on pattern bank switch ────────────
+  const SCENES = ['digital', 'soft', 'art', 'matrix', 'scope'];
+  let sceneIndex = 0;
+  function cycleScene() {
+    sceneIndex = (sceneIndex + 1) % SCENES.length;
+    setStyle(SCENES[sceneIndex]);
+  }
+
   // Apply ?style= URL param
   const sp = new URLSearchParams(location.search).get('style');
   if (sp) {
@@ -407,6 +434,7 @@
   btns.forEach(btn => {
     btn.addEventListener('click', () => {
       setStyle(btn.dataset.style);
+      sceneIndex = SCENES.indexOf(btn.dataset.style);
     });
   });
 
@@ -415,10 +443,10 @@
     btns.forEach(b => b.classList.toggle('active', b.dataset.style === s));
   }
 
-  // Keyboard shortcuts: 1=DIGITAL 2=SOFT 3=ART
+  // Keyboard shortcuts: 1=DIGITAL 2=SOFT 3=ART 4=MATRIX 5=SCOPE
   document.addEventListener('keydown', e => {
-    const map = { '1': 'digital', '2': 'soft', '3': 'art' };
-    if (map[e.key]) setStyle(map[e.key]);
+    const map = { '1': 'digital', '2': 'soft', '3': 'art', '4': 'matrix', '5': 'scope' };
+    if (map[e.key]) { setStyle(map[e.key]); sceneIndex = SCENES.indexOf(map[e.key]); }
     // F = fullscreen toggle
     if (e.key === 'f' || e.key === 'F') {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
