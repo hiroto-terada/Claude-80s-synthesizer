@@ -56,6 +56,19 @@ class VJDisplay {
     this._artAngle   = 0;
     this._artPalette = 0;
 
+    // Matrix mode: falling column streams
+    const COL_W = 8;
+    const numCols = Math.ceil(160 / COL_W);
+    this._matrixCols = Array.from({ length: numCols }, (_, i) => ({
+      head:  -Math.floor(Math.random() * 200),
+      speed: 1 + Math.random() * 2,
+      len:   8 + Math.floor(Math.random() * 18),
+    }));
+
+    // Scope mode: scrolling waveform buffer + last note pitch
+    this._scopeWave = new Array(160).fill(0);
+    this._scopeNote = 60;
+
     // Stars for SOFT mode
     this._stars = Array.from({ length: 30 }, () => ({
       x: Math.random() * 160, y: Math.random() * 144,
@@ -79,6 +92,7 @@ class VJDisplay {
 
   // Called when a melody/chord/keyboard note is triggered
   onNote(midi) {
+    this._scopeNote = midi;
     // Pitch → horizontal world position (C4=60 → center, ±1 octave = ±gSize*1.5)
     const worldX = ((midi - 60) / 12) * 48;
     // Spawn block with slight Z jitter so chords spread
@@ -106,6 +120,8 @@ class VJDisplay {
       case 'digital': this._renderDigital(); break;
       case 'soft':    this._renderSoft();    break;
       case 'art':     this._renderArt();     break;
+      case 'matrix':  this._renderMatrix();  break;
+      case 'scope':   this._renderScope();   break;
     }
   }
 
@@ -679,6 +695,141 @@ class VJDisplay {
     }
 
     this._drawText(('00' + beat).slice(-3), 2, 2, pal[2], 1);
+  }
+
+  // ────────────────────────────────────────────────────────
+  // MATRIX — Game Boy digital rain
+  // ────────────────────────────────────────────────────────
+  _renderMatrix() {
+    const { ctx, W, H, frame, kick, snare } = this;
+    const G0 = '#0f380f';
+    const G1 = '#306230';
+    const G2 = '#8bac0f';
+    const G3 = '#9bbc0f';
+
+    ctx.fillStyle = G0;
+    ctx.fillRect(0, 0, W, H);
+
+    const COL_W = 8;
+    const step  = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
+
+    for (let c = 0; c < this._matrixCols.length; c++) {
+      const col = this._matrixCols[c];
+      const x   = c * COL_W;
+
+      // Advance head position; kicks speed up all streams
+      col.head += col.speed * (kick > 0 ? 1.8 : 1);
+      if (col.head > H + col.len * 5) {
+        col.head  = -(8 + Math.floor(Math.random() * 60));
+        col.speed = 1 + Math.random() * 2;
+        col.len   = 8 + Math.floor(Math.random() * 18);
+      }
+
+      const hy = Math.floor(col.head);
+
+      // Draw trail (older segments fade from G2 → G1 → invisible)
+      for (let t = col.len; t >= 1; t--) {
+        const ty = hy - t * 5;
+        if (ty < 0 || ty >= H) continue;
+        const ratio = 1 - t / col.len;
+        ctx.fillStyle = ratio > 0.65 ? G2 : (ratio > 0.35 ? G1 : G0);
+        ctx.fillRect(x, ty, COL_W - 1, 4);
+      }
+
+      // Draw bright head
+      if (hy >= 0 && hy < H) {
+        ctx.fillStyle = G3;
+        ctx.fillRect(x, hy, COL_W - 1, 4);
+      }
+    }
+
+    // Snare white flash
+    if (snare > 4) {
+      ctx.fillStyle = G2;
+      ctx.globalAlpha = (snare - 4) / 6 * 0.25;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+
+    // Step dots at bottom
+    for (let i = 0; i < 16; i++) {
+      const active = i === step;
+      ctx.fillStyle = active ? G3 : (i % 4 === 0 ? G2 : G1);
+      ctx.fillRect(i * 10, H - 7, 9, active ? 7 : 3);
+    }
+
+    this._drawText(('00' + Math.floor(frame / 60)).slice(-3), 2, 2, G2, 1);
+  }
+
+  // ────────────────────────────────────────────────────────
+  // SCOPE — oscilloscope waveform
+  // ────────────────────────────────────────────────────────
+  _renderScope() {
+    const { ctx, W, H, frame, kick, snare, beat } = this;
+    const G0 = '#0f380f';
+    const G1 = '#306230';
+    const G2 = '#8bac0f';
+    const G3 = '#9bbc0f';
+
+    ctx.fillStyle = G0;
+    ctx.fillRect(0, 0, W, H);
+
+    // Horizontal grid lines
+    ctx.fillStyle = G1;
+    for (let y = 16; y < H - 12; y += 14) {
+      for (let x = 0; x < W; x += 5) ctx.fillRect(x, y, 2, 1);
+    }
+    // Vertical center tick marks
+    for (let x = 0; x < W; x += 20) ctx.fillRect(x, (H >> 1) - 1, 1, 3);
+
+    // Advance waveform buffer — one sample per frame
+    const amp  = 22 + kick * 7 + snare * 3;
+    const freq = 0.07 + (this._scopeNote % 12) * 0.006;
+    // Composite wave: fundamental + 2nd harmonic with slight phase drift
+    const sample = Math.sin(frame * freq + beat * 0.4) * amp
+                 + Math.sin(frame * freq * 2.0 + 1.1) * (amp * 0.35)
+                 + Math.sin(frame * freq * 0.5 + 2.3) * (amp * 0.2);
+    this._scopeWave.push(Math.round(sample));
+    if (this._scopeWave.length > W) this._scopeWave.shift();
+
+    // Draw waveform — vertical line segments connecting adjacent samples
+    const cy = H >> 1;
+    for (let x = 0; x < this._scopeWave.length - 1; x++) {
+      const y1 = cy + this._scopeWave[x];
+      const y2 = cy + this._scopeWave[x + 1];
+      const dy = Math.abs(y2 - y1);
+      ctx.fillStyle = dy > 12 ? G3 : (dy > 4 ? G2 : G1);
+      const minY = Math.max(0, Math.min(y1, y2));
+      const maxY = Math.min(H - 13, Math.max(y1, y2));
+      ctx.fillRect(x, minY, 1, Math.max(1, maxY - minY + 1));
+    }
+
+    // Kick flash — brief bright overlay
+    if (kick > 7) {
+      ctx.fillStyle = G2;
+      ctx.globalAlpha = ((kick - 7) / 10) * 0.35;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+
+    // Scan-line marker (advancing vertical cursor driven by beat phase)
+    const scan = Math.floor((frame * 2) % W);
+    ctx.fillStyle = G3;
+    ctx.fillRect(scan, 0, 1, H - 12);
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = G2;
+    ctx.fillRect((scan + 1) % W, 0, 1, H - 12);
+    ctx.globalAlpha = 1;
+
+    // Step dots at bottom
+    const stepN = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
+    for (let i = 0; i < 16; i++) {
+      const active = i === stepN;
+      ctx.fillStyle = active ? G3 : G1;
+      ctx.fillRect(i * 10, H - 7, 9, active ? 7 : 2);
+    }
+
+    this._drawText(('00' + beat).slice(-3), 2, 2, G2, 1);
   }
 }
 
