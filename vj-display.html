@@ -80,7 +80,7 @@
     #hud { transition: opacity 0.6s; }
     #hud.hidden { opacity: 0; pointer-events: none; }
 
-    #audio-btn {
+    #audio-btn, #auto-cycle-btn {
       font-family: inherit;
       font-size: 9px;
       letter-spacing: 2px;
@@ -92,8 +92,9 @@
       cursor: pointer;
       transition: all 0.15s;
     }
-    #audio-btn:hover { color: #9bbc0f; border-color: #8bac0f; }
-    #audio-btn.on    { color: #9bbc0f; border-color: #8bac0f; background: rgba(15, 56, 15, 0.9); }
+    #audio-btn:hover, #auto-cycle-btn:hover { color: #9bbc0f; border-color: #8bac0f; }
+    #audio-btn.on { color: #9bbc0f; border-color: #8bac0f; background: rgba(15, 56, 15, 0.9); }
+    #auto-cycle-btn.on { color: #9bbc0f; border-color: #8bac0f; background: rgba(15, 56, 15, 0.9); }
   </style>
 </head>
 <body>
@@ -108,7 +109,10 @@
     <button class="style-btn"        data-style="matrix">MATRIX</button>
     <button class="style-btn"        data-style="scope">SCOPE</button>
   </div>
-  <button id="audio-btn">♪ ENABLE AUDIO</button>
+  <div style="display:flex;gap:5px">
+    <button id="auto-cycle-btn">AUTO SCENE: OFF</button>
+    <button id="audio-btn">♪ ENABLE AUDIO</button>
+  </div>
   <div id="status">CONNECTING...</div>
 </div>
 
@@ -116,11 +120,12 @@
 <script src="drum.js"></script>
 <script src="vj.js?v=4"></script>
 <script>
-  const canvas   = document.getElementById('vj-canvas');
-  const statusEl = document.getElementById('status');
-  const hud      = document.getElementById('hud');
-  const btns     = document.querySelectorAll('.style-btn');
-  const audioBtn = document.getElementById('audio-btn');
+  const canvas        = document.getElementById('vj-canvas');
+  const statusEl      = document.getElementById('status');
+  const hud           = document.getElementById('hud');
+  const btns          = document.querySelectorAll('.style-btn');
+  const audioBtn      = document.getElementById('audio-btn');
+  const autoCycleBtn  = document.getElementById('auto-cycle-btn');
 
   // ── Chord utils (mirror of chord.js, no UI dependencies) ─
   const PC_CHORD_TYPES = [
@@ -415,8 +420,21 @@
 
   // ── Scene auto-cycling on pattern bank switch ────────────
   const SCENES = ['digital', 'soft', 'art', 'matrix', 'scope'];
-  let sceneIndex = 0;
+  let sceneIndex    = 0;
+  let autoSceneCycle = false;   // default: OFF
+  let _lastCycleMs  = 0;        // debounce: seq1+seq2 both fire pc_seq_update
+
+  autoCycleBtn.addEventListener('click', () => {
+    autoSceneCycle = !autoSceneCycle;
+    autoCycleBtn.textContent = `AUTO SCENE: ${autoSceneCycle ? 'ON' : 'OFF'}`;
+    autoCycleBtn.classList.toggle('on', autoSceneCycle);
+  });
+
   function cycleScene() {
+    if (!autoSceneCycle) return;
+    const now = Date.now();
+    if (now - _lastCycleMs < 500) return;  // debounce: ignore duplicate events
+    _lastCycleMs = now;
     sceneIndex = (sceneIndex + 1) % SCENES.length;
     setStyle(SCENES[sceneIndex]);
   }
