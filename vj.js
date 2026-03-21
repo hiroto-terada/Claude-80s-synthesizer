@@ -745,9 +745,11 @@ const vjRelay = (() => {
     onBass:   (seq, midi, dur) => send({ t: 'bass', seq, midi, dur }),
     onChord:  notes          => send({ t: 'chord', notes }),
     onPreset: name           => send({ t: 'preset', name }),
+    // FX / volume control relay (knobs + sliders)
+    onCtrl: (tgt, param, val) => send({ t: 'ctrl', tgt, param, val }),
     // PC Sequencer control: sends full pattern so PC can run its own clock
-    onPlay: (bpm, seq1, seq2, drums, drumEnabled, chord) =>
-      send({ t: 'pc_play', bpm, seq1, seq2, drums, drumEnabled, chord }),
+    onPlay: (bpm, seq1, seq2, drums, drumEnabled, chord, fxState) =>
+      send({ t: 'pc_play', bpm, seq1, seq2, drums, drumEnabled, chord, fxState }),
     onStop: () => send({ t: 'pc_stop' }),
     onBpm:  bpm => send({ t: 'pc_bpm', bpm }),
     // Live pattern updates during playback (pattern bank switch, drum edits)

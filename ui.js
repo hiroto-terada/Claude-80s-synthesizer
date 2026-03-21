@@ -370,6 +370,7 @@ function applyKnobParam(param, val) {
     case 'delayTime': synth.setDelayTime(val);     break;
     case 'delayFb':   synth.setDelayFeedback(val); break;
   }
+  if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('melody', param, val);
 }
 
 function syncKnobsToSynth() {
@@ -430,26 +431,52 @@ function setLed(id, on) {
 
   // ── Volume sliders ──
   sliderSynth.addEventListener('input', () => {
-    if (synth) synth.setMasterVolume(parseFloat(sliderSynth.value));
+    const v = parseFloat(sliderSynth.value);
+    if (synth) synth.setMasterVolume(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('melody', 'volume', v);
   });
   sliderSeq1.addEventListener('input', () => {
-    if (bassSynth) bassSynth.setMasterVolume(parseFloat(sliderSeq1.value));
+    const v = parseFloat(sliderSeq1.value);
+    if (bassSynth) bassSynth.setMasterVolume(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('bass1', 'volume', v);
   });
   sliderSeq2.addEventListener('input', () => {
-    if (bassSynth2) bassSynth2.setMasterVolume(parseFloat(sliderSeq2.value));
+    const v = parseFloat(sliderSeq2.value);
+    if (bassSynth2) bassSynth2.setMasterVolume(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('bass2', 'volume', v);
   });
   sliderChord.addEventListener('input', () => {
-    if (chordSynth) chordSynth.setMasterVolume(parseFloat(sliderChord.value));
+    const v = parseFloat(sliderChord.value);
+    if (chordSynth) chordSynth.setMasterVolume(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('chord', 'volume', v);
   });
   sliderDrum.addEventListener('input', () => {
-    if (drumSynth) drumSynth.setMasterVolume(parseFloat(sliderDrum.value));
+    const v = parseFloat(sliderDrum.value);
+    if (drumSynth) drumSynth.setMasterVolume(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('drums', 'volume', v);
   });
 
   // ── SEQ FX sliders ──
-  sliderDist.addEventListener('input',  () => { if (bassSynth) bassSynth.setDistortion(parseFloat(sliderDist.value)); });
-  sliderComp.addEventListener('input',  () => { if (bassSynth) bassSynth.setCompressor(parseFloat(sliderComp.value)); });
-  sliderDelay.addEventListener('input', () => { if (bassSynth) bassSynth.setDelayTime(parseFloat(sliderDelay.value)); });
-  sliderReverb.addEventListener('input',() => { if (bassSynth) bassSynth.setReverbMix(parseFloat(sliderReverb.value)); });
+  sliderDist.addEventListener('input',  () => {
+    const v = parseFloat(sliderDist.value);
+    if (bassSynth) bassSynth.setDistortion(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('bass1', 'dist', v);
+  });
+  sliderComp.addEventListener('input',  () => {
+    const v = parseFloat(sliderComp.value);
+    if (bassSynth) bassSynth.setCompressor(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('bass1', 'comp', v);
+  });
+  sliderDelay.addEventListener('input', () => {
+    const v = parseFloat(sliderDelay.value);
+    if (bassSynth) bassSynth.setDelayTime(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('bass1', 'delayTime', v);
+  });
+  sliderReverb.addEventListener('input',() => {
+    const v = parseFloat(sliderReverb.value);
+    if (bassSynth) bassSynth.setReverbMix(v);
+    if (typeof vjRelay !== 'undefined') vjRelay.onCtrl('bass1', 'reverb', v);
+  });
 
   // ── Swipe: open from right edge, close swipe right ──
   let tx0 = 0, ty0 = 0, tracking = false;

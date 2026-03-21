@@ -93,8 +93,35 @@ class Sequencer {
     this.playing = true;
     this.currentStep = -1;
 
-    // Send full pattern snapshot to PC so it can run its own precise clock
+    // Send full pattern snapshot + current FX state to PC
     if (this === sequencer && typeof vjRelay !== 'undefined') {
+      // Collect current FX values from synth objects (all globals)
+      const fxState = {};
+      if (typeof synth !== 'undefined' && synth) {
+        fxState.melody = {
+          patch:     { ...synth.patch },
+          filter:    synth.filter.frequency.value,
+          reverb:    synth.reverbSend.gain.value / 0.35,
+          delayTime: synth.delayNode.delayTime.value,
+          delayFb:   synth.delayFeedback.gain.value,
+          volume:    synth.masterGain.gain.value,
+        };
+      }
+      if (typeof bassSynth !== 'undefined' && bassSynth) {
+        fxState.bass1 = {
+          volume:    bassSynth.masterGain.gain.value,
+          delayTime: bassSynth.delayNode.delayTime.value,
+          delayFb:   bassSynth.delayFeedback.gain.value,
+          reverb:    bassSynth.reverbSend.gain.value / 0.35,
+        };
+      }
+      if (typeof bassSynth2 !== 'undefined' && bassSynth2)
+        fxState.bass2 = { volume: bassSynth2.masterGain.gain.value };
+      if (typeof chordSynth !== 'undefined' && chordSynth)
+        fxState.chord = { volume: chordSynth.masterGain.gain.value };
+      if (typeof drumSynth !== 'undefined' && drumSynth)
+        fxState.drums = { volume: drumSynth.masterGain.gain.value };
+
       vjRelay.onPlay(
         this.bpm,
         this.steps.map(s => ({ midi: s.midi, active: s.active })),
@@ -105,7 +132,8 @@ class Sequencer {
         this.drumEnabled,
         (typeof chordSeq !== 'undefined' && chordSeq)
           ? chordSeq.steps.map(s => ({ active: s.active, chord: s.chord }))
-          : []
+          : [],
+        fxState
       );
     }
 
