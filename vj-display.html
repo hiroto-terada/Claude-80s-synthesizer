@@ -156,6 +156,10 @@
       this.drumSteps  = null;
       this.drumEnabled = false;
       this.chordSteps = [];
+      // Pending patterns — applied at next step 0 (same as iPhone _pendingPattern)
+      this._pendingSeq1  = null;
+      this._pendingSeq2  = null;
+      this._pendingChord = null;
     }
 
     start(data) {
@@ -177,6 +181,9 @@
       if (this._timerId) { clearTimeout(this._timerId); this._timerId = null; }
       this._prevChordMidis.forEach(m => this.chordSynth.noteOff(m));
       this._prevChordMidis = [];
+      this._pendingSeq1 = null;
+      this._pendingSeq2 = null;
+      this._pendingChord = null;
     }
 
     updateBpm(bpm) { this.stepSec = (60 / bpm) / 4; }
@@ -194,6 +201,13 @@
     }
 
     _scheduleStep(s, when) {
+      // Apply queued pattern updates at loop start — mirrors iPhone _pendingPattern behaviour
+      if (s === 0) {
+        if (this._pendingSeq1)  { this.seq1Steps  = this._pendingSeq1;  this._pendingSeq1  = null; }
+        if (this._pendingSeq2)  { this.seq2Steps  = this._pendingSeq2;  this._pendingSeq2  = null; }
+        if (this._pendingChord) { this.chordSteps = this._pendingChord; this._pendingChord = null; }
+      }
+
       // Drums
       if (this.drumEnabled && this.drumSteps) {
         const ds = this.drumSteps;
@@ -334,12 +348,13 @@
       // ── Live pattern updates during playback ────────────
       case 'pc_seq_update':
         if (pcAudioReady && pcSeqActive) {
-          if (ev.seq === 'seq2') pcSequencer.seq2Steps = ev.steps;
-          else                   pcSequencer.seq1Steps = ev.steps;
+          // Queue for next step-0 boundary — same timing as iPhone's pending pattern
+          if (ev.seq === 'seq2') pcSequencer._pendingSeq2  = ev.steps;
+          else                   pcSequencer._pendingSeq1  = ev.steps;
         }
         return;
       case 'pc_chord_update':
-        if (pcAudioReady && pcSeqActive) pcSequencer.chordSteps = ev.steps;
+        if (pcAudioReady && pcSeqActive) pcSequencer._pendingChord = ev.steps;
         return;
       case 'pc_drum_update':
         if (pcAudioReady && pcSeqActive) pcSequencer.drumSteps = ev.drums;
