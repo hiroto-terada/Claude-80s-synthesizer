@@ -268,11 +268,51 @@
     if (pendingPlayData) {
       pcSequencer.start(pendingPlayData);
       pcSeqActive = true;
+      applyFxState(pendingPlayData.fxState);
       pendingPlayData = null;
     }
   }
 
   audioBtn.addEventListener('click', enablePCAudio);
+
+  function applyCtrl(tgt, param, val) {
+    const map = { melody: pcMelody, bass1: pcBass1, bass2: pcBass2, chord: pcChordSynth, drums: pcDrums };
+    const s = map[tgt];
+    if (!s) return;
+    switch (param) {
+      case 'volume':    s.setMasterVolume(val); break;
+      case 'filter':    if (s.setFilterFreq)    s.setFilterFreq(val);    break;
+      case 'reverb':    if (s.setReverbMix)     s.setReverbMix(val);     break;
+      case 'dist':      if (s.setDistortion)    s.setDistortion(val);    break;
+      case 'comp':      if (s.setCompressor)    s.setCompressor(val);    break;
+      case 'delayTime': if (s.setDelayTime)     s.setDelayTime(val);     break;
+      case 'delayFb':   if (s.setDelayFeedback) s.setDelayFeedback(val); break;
+      default:          if (s.setParam)         s.setParam(param, val);  break;
+    }
+  }
+
+  function applyFxState(fx) {
+    if (!fx) return;
+    if (fx.melody && pcMelody) {
+      const m = fx.melody;
+      if (m.patch) Object.keys(m.patch).forEach(k => pcMelody.setParam(k, m.patch[k]));
+      if (m.filter    !== undefined) pcMelody.setFilterFreq(m.filter);
+      if (m.reverb    !== undefined) pcMelody.setReverbMix(m.reverb);
+      if (m.delayTime !== undefined) pcMelody.setDelayTime(m.delayTime);
+      if (m.delayFb   !== undefined) pcMelody.setDelayFeedback(m.delayFb);
+      if (m.volume    !== undefined) pcMelody.setMasterVolume(m.volume);
+    }
+    if (fx.bass1 && pcBass1) {
+      const b = fx.bass1;
+      if (b.volume    !== undefined) pcBass1.setMasterVolume(b.volume);
+      if (b.delayTime !== undefined) pcBass1.setDelayTime(b.delayTime);
+      if (b.delayFb   !== undefined) pcBass1.setDelayFeedback(b.delayFb);
+      if (b.reverb    !== undefined) pcBass1.setReverbMix(b.reverb);
+    }
+    if (fx.bass2 && pcBass2 && fx.bass2.volume !== undefined) pcBass2.setMasterVolume(fx.bass2.volume);
+    if (fx.chord && pcChordSynth && fx.chord.volume !== undefined) pcChordSynth.setMasterVolume(fx.chord.volume);
+    if (fx.drums && pcDrums && fx.drums.volume !== undefined) pcDrums.setMasterVolume(fx.drums.volume);
+  }
 
   function handleAudioEvent(ev) {
     switch (ev.t) {
@@ -281,6 +321,7 @@
         if (!pcAudioReady) { pendingPlayData = ev; return; }
         pcSequencer.start(ev);
         pcSeqActive = true;
+        applyFxState(ev.fxState);
         return;
       case 'pc_stop':
         if (pcAudioReady) pcSequencer.stop();
@@ -317,6 +358,10 @@
         return;
       case 'preset':
         if (pcAudioReady && pcMelody) pcMelody.setPatch(ev.name);
+        return;
+      case 'ctrl':
+        if (!pcAudioReady) return;
+        applyCtrl(ev.tgt, ev.param, ev.val);
         return;
     }
 
