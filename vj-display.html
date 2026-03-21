@@ -290,6 +290,22 @@
       case 'pc_bpm':
         if (pcAudioReady && pcSeqActive) pcSequencer.updateBpm(ev.bpm);
         return;
+      // ── Live pattern updates during playback ────────────
+      case 'pc_seq_update':
+        if (pcAudioReady && pcSeqActive) {
+          if (ev.seq === 'seq2') pcSequencer.seq2Steps = ev.steps;
+          else                   pcSequencer.seq1Steps = ev.steps;
+        }
+        return;
+      case 'pc_chord_update':
+        if (pcAudioReady && pcSeqActive) pcSequencer.chordSteps = ev.steps;
+        return;
+      case 'pc_drum_update':
+        if (pcAudioReady && pcSeqActive) pcSequencer.drumSteps = ev.drums;
+        return;
+      case 'pc_drum_enable':
+        if (pcAudioReady && pcSeqActive) pcSequencer.drumEnabled = ev.enabled;
+        return;
       // ── Live/control events (always pass through) ───────
       case 'note':
         if (!pcAudioReady) return;
