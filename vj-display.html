@@ -272,7 +272,11 @@
   let pendingPlayData = null;
 
   function enablePCAudio() {
-    if (pcAudioReady) return;
+    if (pcAudioReady) {
+      // Re-click: resume a suspended context (browser may have auto-suspended it)
+      if (pcAudioCtx && pcAudioCtx.state === 'suspended') pcAudioCtx.resume();
+      return;
+    }
     pcAudioCtx   = new (window.AudioContext || window.webkitAudioContext)();
     pcDrums      = new DrumSynth(pcAudioCtx);
     pcMelody     = new FMSynth(pcAudioCtx);
@@ -336,6 +340,9 @@
   }
 
   function handleAudioEvent(ev) {
+    // Resume AudioContext if browser auto-suspended it (e.g. tab was backgrounded)
+    if (pcAudioCtx && pcAudioCtx.state === 'suspended') pcAudioCtx.resume();
+
     switch (ev.t) {
       // ── PC Sequencer control (always handled) ───────────
       case 'pc_play':
