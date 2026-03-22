@@ -44,6 +44,10 @@ class VJDisplay {
     this._shootingStars  = [];
     this._shootTimer     = 180 + Math.floor(Math.random() * 280);
 
+    // DIGITAL mode: background scene cycling (0=city 1=suburb 2=mountain)
+    this._digitalBg  = -1;   // -1 forces change detection on first frame
+    this._bgFlash    =  0;   // countdown for scene-change flash
+
     // Soft mode blob state
     this._blobs = Array.from({ length: 5 }, () => ({
       x: Math.random() * 160, y: Math.random() * 144,
@@ -219,27 +223,23 @@ class VJDisplay {
       }
     }
 
-    // ── SKYLINE BUILDINGS (slow scroll) ────────────────────
-    const bscroll = (frame * 0.25) % 320;
-    // Building data: [width, height] pairs repeating
-    const bld = [14,14, 10,20, 16,10, 12,18, 8,22, 18,12, 11,16, 14,8, 9,19, 15,14];
-    ctx.fillStyle = G1;
-    for (let i = 0; i < 20; i++) {
-      const d = bld[(i % bld.length >> 1) * 2] !== undefined ? bld : bld;
-      const bw = bld[(i * 2) % bld.length];
-      const bh = bld[(i * 2 + 1) % bld.length];
-      const bx = ((i * 16 - bscroll + 320) % 320) - 16;
-      ctx.fillRect(bx, hy - bh, bw, bh);
-      // Window lights (G2)
-      ctx.fillStyle = G2;
-      for (let wy = hy - bh + 3; wy < hy - 2; wy += 5) {
-        for (let wx = bx + 2; wx < bx + bw - 1; wx += 4) {
-          if (Math.sin(i * 13 + wy * 5 + frame * 0.04) > 0.25) {
-            ctx.fillRect(wx, wy, 2, 2);
-          }
-        }
-      }
-      ctx.fillStyle = G1;
+    // ── SKYLINE: cycle every 4 loops (16 beats) ────────────
+    const bgScene = Math.floor(this.beat / 16) % 3;
+    if (bgScene !== this._digitalBg) {
+      this._digitalBg = bgScene;
+      if (this.beat > 0) this._bgFlash = 10;  // flash on change (skip first frame)
+    }
+    if      (bgScene === 0) this._drawBgCity(frame, hy, G1, G2);
+    else if (bgScene === 1) this._drawBgSuburb(frame, hy, G1, G2);
+    else                    this._drawBgMountain(frame, hy, G0, G1, G2, G3);
+
+    // Brief bright flash on scene change
+    if (this._bgFlash > 0) {
+      ctx.fillStyle = G3;
+      ctx.globalAlpha = (this._bgFlash / 10) * 0.55;
+      ctx.fillRect(0, 0, W, hy);
+      ctx.globalAlpha = 1;
+      this._bgFlash--;
     }
 
     // ── HORIZON LINE ───────────────────────────────────────
@@ -250,19 +250,22 @@ class VJDisplay {
     ctx.fillStyle = G0;
     ctx.fillRect(0, hy, W, gH);
 
-    // Per-scanline: alternating row shading (depth checkerboard)
+    // ── GROUND TEXTURE (scene-dependent) ───────────────────
+    const groundCell = bgScene === 1 ? gSize / 2 : gSize;  // rice paddy = finer grid
+
+    // Per-scanline: alternating row shading
     for (let y = hy; y < hy + gH; y++) {
-      const t = (y - hy + 0.5) / gH;  // 0 horizon, 1 near
+      const t = (y - hy + 0.5) / gH;
       const worldZ = (fov / t) - scrollZ;
-      if (Math.floor(worldZ / gSize) & 1) {
+      if (Math.floor(worldZ / groundCell) & 1) {
         ctx.fillStyle = G1;
         ctx.fillRect(0, y, W, 1);
       }
     }
 
-    // Horizontal grid lines (perspective-correct, scrolling)
-    for (let n = 0; n < 30; n++) {
-      const wz = n * gSize - (scrollZ % gSize);
+    // Horizontal grid lines
+    for (let n = 0; n < 60; n++) {
+      const wz = n * groundCell - (scrollZ % groundCell);
       if (wz <= 1) continue;
       const t = fov / wz;
       if (t >= 1.0) continue;
@@ -273,15 +276,21 @@ class VJDisplay {
       ctx.fillRect(0, y, W, 1);
     }
 
-    // Vertical grid lines (all converge to vanishing point)
+    // Vertical grid lines — city/mountain: converging perspective; rice paddy: wider field dividers
     ctx.lineWidth = 1;
-    for (let col = -2; col <= 2; col++) {
-      const bx = vpX + col * gSize;
-      ctx.strokeStyle = col === 0 ? G2 : G1;
-      ctx.beginPath();
-      ctx.moveTo(vpX, hy);
-      ctx.lineTo(bx, hy + gH);
-      ctx.stroke();
+    if (bgScene === 1) {
+      // Paddy fields: more vertical dividers spread wider
+      for (let col = -4; col <= 4; col++) {
+        const bx = vpX + col * gSize;
+        ctx.strokeStyle = col === 0 ? G2 : G1;
+        ctx.beginPath(); ctx.moveTo(vpX, hy); ctx.lineTo(bx, hy + gH); ctx.stroke();
+      }
+    } else {
+      for (let col = -2; col <= 2; col++) {
+        const bx = vpX + col * gSize;
+        ctx.strokeStyle = col === 0 ? G2 : G1;
+        ctx.beginPath(); ctx.moveTo(vpX, hy); ctx.lineTo(bx, hy + gH); ctx.stroke();
+      }
     }
 
     // ── 3D BLOCKS (notes flying toward viewer) ──────────────
@@ -395,6 +404,148 @@ class VJDisplay {
       ctx.fillRect(bx + 1, H - 10, 8, active ? 9 : (isBeat ? 5 : 3));
     }
     this._drawText(('000' + this.beat).slice(-3), W - 22, H - 11, G3, 1);
+  }
+
+  // ── BG SCENE 0: city buildings ──────────────────────────
+  _drawBgCity(frame, hy, G1, G2) {
+    const { ctx } = this;
+    const bscroll = (frame * 0.25) % 320;
+    const bld = [14,14, 10,20, 16,10, 12,18, 8,22, 18,12, 11,16, 14,8, 9,19, 15,14];
+    ctx.fillStyle = G1;
+    for (let i = 0; i < 20; i++) {
+      const bw = bld[(i * 2)     % bld.length];
+      const bh = bld[(i * 2 + 1) % bld.length];
+      const bx = ((i * 16 - bscroll + 320) % 320) - 16;
+      ctx.fillRect(bx, hy - bh, bw, bh);
+      ctx.fillStyle = G2;
+      for (let wy = hy - bh + 3; wy < hy - 2; wy += 5) {
+        for (let wx = bx + 2; wx < bx + bw - 1; wx += 4) {
+          if (Math.sin(i * 13 + wy * 5 + frame * 0.04) > 0.25) ctx.fillRect(wx, wy, 2, 2);
+        }
+      }
+      ctx.fillStyle = G1;
+    }
+  }
+
+  // ── BG SCENE 1: suburb — houses + rice paddy ────────────
+  _drawBgSuburb(frame, hy, G1, G2) {
+    const { ctx, W } = this;
+    // House definitions: [bodyW, bodyH, roofH, postGap]
+    const houses = [
+      [22, 8, 6, 14], [15, 7, 5, 22], [20, 9, 7, 10],
+      [17, 6, 5, 18], [12, 7, 5, 28], [24, 8, 6, 8],
+    ];
+    const totalW = houses.reduce((s, h) => s + h[0] + h[3], 0);  // ≈ 178
+    const hscroll = (frame * 0.15) % totalW;
+
+    // Compute x offsets for each house in the tile
+    let offsets = [], cx = 0;
+    for (const h of houses) { offsets.push(cx); cx += h[0] + h[3]; }
+
+    ctx.fillStyle = G1;
+    for (let tile = -1; tile <= 2; tile++) {
+      for (let i = 0; i < houses.length; i++) {
+        const [bw, bh, rh, gap] = houses[i];
+        const hx = Math.floor((offsets[i] + tile * totalW - hscroll % totalW + totalW * 2) % (totalW * 2)) - bw;
+        if (hx > W + 2 || hx + bw < -2) continue;
+
+        // Body
+        ctx.fillStyle = G1;
+        ctx.fillRect(hx, hy - bh, bw, bh);
+
+        // Gabled roof (triangle)
+        for (let ry = 0; ry < rh; ry++) {
+          const hw = Math.round((ry / rh) * (bw >> 1));
+          ctx.fillRect(hx + (bw >> 1) - hw, hy - bh - rh + ry, hw * 2 + 1, 1);
+        }
+
+        // Windows (G2)
+        ctx.fillStyle = G2;
+        if (bw >= 14) {
+          ctx.fillRect(hx + 3, hy - bh + 2, 3, 3);
+          ctx.fillRect(hx + bw - 6, hy - bh + 2, 3, 3);
+        } else {
+          ctx.fillRect(hx + (bw >> 1) - 1, hy - bh + 2, 3, 3);
+        }
+
+        // Door (center bottom)
+        ctx.fillStyle = G1;
+        ctx.fillRect(hx + (bw >> 1) - 1, hy - 3, 3, 3);
+      }
+    }
+
+    // Rice paddy: horizontal shimmer bands just above horizon
+    ctx.fillStyle = G2;
+    for (let y = hy - 4; y < hy; y++) {
+      for (let x = (y % 2) * 3; x < W; x += 6) ctx.fillRect(x, y, 3, 1);
+    }
+    // Paddy grid lines (vertical dividers every ~16px, dashed)
+    ctx.fillStyle = G1;
+    for (let x = (Math.floor(frame * 0.15) % 16); x < W; x += 16) {
+      ctx.fillRect(x, hy - 4, 1, 4);
+    }
+  }
+
+  // ── BG SCENE 2: mountains + moon ────────────────────────
+  _drawBgMountain(frame, hy, G0, G1, G2, G3) {
+    const { ctx, W } = this;
+
+    // Moon (fixed upper-right, radius 9)
+    const mx = 118, my = 14, mr = 9;
+    ctx.fillStyle = G3;
+    for (let dy = -mr; dy <= mr; dy++) {
+      const hw = Math.round(Math.sqrt(mr * mr - dy * dy));
+      const py = my + dy;
+      if (py >= 0 && py < hy) ctx.fillRect(mx - hw, py, hw * 2 + 1, 1);
+    }
+    // Moon glow ring (1px outline in G2)
+    const gr = mr + 2;
+    for (let dy = -gr; dy <= gr; dy++) {
+      const oHw = Math.round(Math.sqrt(gr * gr - dy * dy));
+      const iHw = Math.round(Math.sqrt(Math.max(0, (gr-1)*(gr-1) - dy*dy)));
+      const py  = my + dy;
+      if (py < 0 || py >= hy) continue;
+      ctx.fillStyle = G2;
+      if (oHw > iHw) {
+        ctx.fillRect(mx - oHw, py, oHw - iHw, 1);       // left arc
+        ctx.fillRect(mx + iHw + 1, py, oHw - iHw, 1);   // right arc
+      }
+    }
+
+    // Mountain silhouettes (back peaks = G0 then front peaks = G1)
+    // Slow parallax scroll for distant range
+    const mscroll = (frame * 0.06) % 160;
+    const peaks = [
+      // far range (G0, drawn first): cx, width, height
+      { cx: ((20  - mscroll + 320) % 320) - 0,  w: 100, h: 22, col: G0 },
+      { cx: ((100 - mscroll + 320) % 320) - 0,  w:  80, h: 18, col: G0 },
+      { cx: ((180 - mscroll + 320) % 320) - 0,  w:  90, h: 20, col: G0 },
+      // near range (G1): slightly faster
+      { cx: ((10  - mscroll * 1.4 + 480) % 480) - 0, w: 110, h: 34, col: G1 },
+      { cx: ((120 - mscroll * 1.4 + 480) % 480) - 0, w:  90, h: 38, col: G1 },
+      { cx: ((240 - mscroll * 1.4 + 480) % 480) - 0, w: 100, h: 30, col: G1 },
+    ];
+    for (const pk of peaks) {
+      ctx.fillStyle = pk.col;
+      for (let dy = 0; dy < pk.h; dy++) {
+        const py = hy - pk.h + dy;
+        if (py < 0 || py >= hy) continue;
+        const hw = Math.round((dy / pk.h) * (pk.w >> 1));
+        ctx.fillRect(Math.round(pk.cx) - hw, py, hw * 2 + 1, 1);
+      }
+    }
+
+    // Snow cap on tallest visible peaks (G2, top 20% of peak)
+    for (const pk of peaks.filter(p => p.col === G1)) {
+      const snowH = Math.floor(pk.h * 0.22);
+      ctx.fillStyle = G2;
+      for (let dy = 0; dy < snowH; dy++) {
+        const py = hy - pk.h + dy;
+        if (py < 0 || py >= hy) continue;
+        const hw = Math.round((dy / pk.h) * (pk.w >> 1));
+        if (hw > 0) ctx.fillRect(Math.round(pk.cx) - hw + 1, py, hw * 2 - 1, 1);
+      }
+    }
   }
 
   _drawText(str, x, y, color, scale = 1) {
