@@ -56,13 +56,20 @@ class VJDisplay {
     this._artAngle   = 0;
     this._artPalette = 0;
 
-    // Matrix mode: falling column streams
-    const COL_W = 8;
-    const numCols = Math.ceil(160 / COL_W);
-    this._matrixCols = Array.from({ length: numCols }, (_, i) => ({
-      head:  -Math.floor(Math.random() * 200),
-      speed: 1 + Math.random() * 2,
-      len:   8 + Math.floor(Math.random() * 18),
+    // Matrix mode: falling character streams (half-width katakana + digits)
+    const MTX_CHARS = 'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789';
+    const MTX_CW = 6, MTX_CH = 8;
+    const mtxCols = Math.ceil(160 / MTX_CW);
+    const mtxRows = Math.ceil(144 / MTX_CH);
+    this._mtxChars = MTX_CHARS;
+    this._mtxCW = MTX_CW; this._mtxCH = MTX_CH;
+    this._mtxRows = mtxRows;
+    this._matrixCols = Array.from({ length: mtxCols }, () => ({
+      head:  -Math.floor(Math.random() * mtxRows * 2),  // current head row (float)
+      speed: 0.08 + Math.random() * 0.14,               // rows per frame
+      len:   6 + Math.floor(Math.random() * 10),        // trail length in rows
+      chars: Array.from({ length: mtxRows }, () =>
+        MTX_CHARS[Math.floor(Math.random() * MTX_CHARS.length)]),
     }));
 
     // Scope mode: scrolling waveform buffer + last note pitch
@@ -707,54 +714,69 @@ class VJDisplay {
     const G2 = '#8bac0f';
     const G3 = '#9bbc0f';
 
-    ctx.fillStyle = G0;
+    // Black background with very faint green tint
+    ctx.fillStyle = '#000800';
     ctx.fillRect(0, 0, W, H);
 
-    const COL_W = 8;
-    const step  = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
+    const { _mtxCW: CW, _mtxCH: CH, _mtxRows: ROWS, _mtxChars: CHARS } = this;
+    const step = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
+
+    ctx.font = `bold ${CH - 1}px monospace`;
+    ctx.textAlign = 'left';
 
     for (let c = 0; c < this._matrixCols.length; c++) {
       const col = this._matrixCols[c];
-      const x   = c * COL_W;
+      const x   = c * CW;
 
-      // Advance head position; kicks speed up all streams
-      col.head += col.speed * (kick > 0 ? 1.8 : 1);
-      if (col.head > H + col.len * 5) {
-        col.head  = -(8 + Math.floor(Math.random() * 60));
-        col.speed = 1 + Math.random() * 2;
-        col.len   = 8 + Math.floor(Math.random() * 18);
+      // Advance head (kicks accelerate streams)
+      col.head += col.speed * (kick > 0 ? 2.5 : 1);
+      if (col.head > ROWS + col.len) {
+        col.head  = -(2 + Math.random() * ROWS);
+        col.speed = 0.08 + Math.random() * 0.14;
+        col.len   = 6 + Math.floor(Math.random() * 10);
       }
 
-      const hy = Math.floor(col.head);
-
-      // Draw trail (older segments fade from G2 → G1 → invisible)
-      for (let t = col.len; t >= 1; t--) {
-        const ty = hy - t * 5;
-        if (ty < 0 || ty >= H) continue;
-        const ratio = 1 - t / col.len;
-        ctx.fillStyle = ratio > 0.65 ? G2 : (ratio > 0.35 ? G1 : G0);
-        ctx.fillRect(x, ty, COL_W - 1, 4);
+      // Randomly flicker one character per column every few frames
+      if (frame % 4 === c % 4) {
+        const r = Math.floor(Math.random() * ROWS);
+        col.chars[r] = CHARS[Math.floor(Math.random() * CHARS.length)];
       }
 
-      // Draw bright head
-      if (hy >= 0 && hy < H) {
-        ctx.fillStyle = G3;
-        ctx.fillRect(x, hy, COL_W - 1, 4);
+      const headRow = Math.floor(col.head);
+
+      for (let t = 0; t < col.len; t++) {
+        const row = headRow - t;
+        if (row < 0 || row >= ROWS) continue;
+        const y = row * CH;
+
+        if (t === 0) {
+          // Head: white flash
+          ctx.fillStyle = '#ffffff';
+        } else {
+          // Trail: bright → mid → dark green
+          const ratio = t / col.len;
+          if      (ratio < 0.15) ctx.fillStyle = '#9bef9b';
+          else if (ratio < 0.45) ctx.fillStyle = '#00cc00';
+          else if (ratio < 0.75) ctx.fillStyle = '#008800';
+          else                   ctx.fillStyle = '#004400';
+        }
+        ctx.fillText(col.chars[row], x, y + CH - 2);
       }
     }
 
-    // Snare white flash
+    // Snare: brief white shimmer
     if (snare > 4) {
-      ctx.fillStyle = G2;
-      ctx.globalAlpha = (snare - 4) / 6 * 0.25;
+      ctx.fillStyle = '#00ff00';
+      ctx.globalAlpha = (snare - 4) / 6 * 0.15;
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
     }
 
     // Step dots at bottom
+    ctx.textAlign = 'left';
     for (let i = 0; i < 16; i++) {
       const active = i === step;
-      ctx.fillStyle = active ? G3 : (i % 4 === 0 ? G2 : G1);
+      ctx.fillStyle = active ? '#ffffff' : (i % 4 === 0 ? '#00cc00' : '#004400');
       ctx.fillRect(i * 10, H - 7, 9, active ? 7 : 3);
     }
 
