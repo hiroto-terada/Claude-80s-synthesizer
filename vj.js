@@ -73,8 +73,12 @@ class VJDisplay {
     }));
 
     // Scope mode: scrolling waveform buffer + last note pitch
-    this._scopeWave = new Array(160).fill(0);
+    this._scopeWave = new Array(160).fill(0);  // reused as wave buffer
     this._scopeNote = 60;
+    this._sPhase = 0;    // phase accumulator
+    this._sAmp   = 22;   // smoothed amplitude
+    this._sDist  = 0;    // smoothed distortion (kick)
+    this._sFm    = 0;    // smoothed FM modulation depth (snare)
 
     // Stars for SOFT mode
     this._stars = Array.from({ length: 30 }, () => ({
@@ -784,74 +788,103 @@ class VJDisplay {
   }
 
   // ────────────────────────────────────────────────────────
-  // SCOPE — oscilloscope waveform
+  // SCOPE — phosphor oscilloscope, fully audio-reactive
   // ────────────────────────────────────────────────────────
   _renderScope() {
     const { ctx, W, H, frame, kick, snare, beat } = this;
-    const G0 = '#0f380f';
-    const G1 = '#306230';
-    const G2 = '#8bac0f';
-    const G3 = '#9bbc0f';
 
-    ctx.fillStyle = G0;
+    // Phosphor persistence: partial clear → old traces fade like a real CRT
+    ctx.fillStyle = '#0f380f';
+    ctx.globalAlpha = 0.45;
     ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
 
-    // Horizontal grid lines
-    ctx.fillStyle = G1;
-    for (let y = 16; y < H - 12; y += 14) {
-      for (let x = 0; x < W; x += 5) ctx.fillRect(x, y, 2, 1);
+    // Subtle grid
+    ctx.fillStyle = '#1f4a1f';
+    for (let y = 18; y < H - 12; y += 18) {
+      for (let x = 0; x < W; x += 4) ctx.fillRect(x, y, 2, 1);
     }
-    // Vertical center tick marks
-    for (let x = 0; x < W; x += 20) ctx.fillRect(x, (H >> 1) - 1, 1, 3);
+    for (let x = 0; x < W; x += 32) ctx.fillRect(x, (H >> 1) - 1, 1, 3);
 
-    // Advance waveform buffer — one sample per frame
-    const amp  = 22 + kick * 7 + snare * 3;
-    const freq = 0.07 + (this._scopeNote % 12) * 0.006;
-    // Composite wave: fundamental + 2nd harmonic with slight phase drift
-    const sample = Math.sin(frame * freq + beat * 0.4) * amp
-                 + Math.sin(frame * freq * 2.0 + 1.1) * (amp * 0.35)
-                 + Math.sin(frame * freq * 0.5 + 2.3) * (amp * 0.2);
-    this._scopeWave.push(Math.round(sample));
-    if (this._scopeWave.length > W) this._scopeWave.shift();
+    // ── Smooth reactive parameters ────────────────────────
+    // Kick → amplitude surge + hard clipping (→ square wave shape)
+    const targetAmp  = 22 + kick * 10 + snare * 4;
+    const targetDist = Math.min(1, kick / 10);
+    // Snare → FM modulation (metallic warp)
+    const targetFm   = Math.min(1, snare / 6);
 
-    // Draw waveform — vertical line segments connecting adjacent samples
-    const cy = H >> 1;
-    for (let x = 0; x < this._scopeWave.length - 1; x++) {
-      const y1 = cy + this._scopeWave[x];
-      const y2 = cy + this._scopeWave[x + 1];
-      const dy = Math.abs(y2 - y1);
-      ctx.fillStyle = dy > 12 ? G3 : (dy > 4 ? G2 : G1);
-      const minY = Math.max(0, Math.min(y1, y2));
-      const maxY = Math.min(H - 13, Math.max(y1, y2));
-      ctx.fillRect(x, minY, 1, Math.max(1, maxY - minY + 1));
+    this._sAmp  = this._sAmp  * 0.72 + targetAmp  * 0.28;
+    this._sDist = this._sDist * 0.68 + targetDist * 0.32;
+    this._sFm   = this._sFm   * 0.68 + targetFm   * 0.32;
+
+    // Pitch → cycles visible on screen (C4=60 → 3 cycles; each octave doubles)
+    const cycles = Math.pow(2, (this._scopeNote - 60) / 12) * 3;
+
+    // Phase flows at pitch speed → wave appears to scroll
+    this._sPhase += (cycles / W) * Math.PI * 1.8;
+
+    const cy   = H >> 1;
+    const amp  = this._sAmp;
+    const dist = this._sDist;
+    const fm   = this._sFm;
+    const ph   = this._sPhase;
+
+    // ── Precompute wave into reused buffer ───────────────
+    const wave = this._scopeWave;
+    for (let x = 0; x < W; x++) {
+      const t = (x / W) * Math.PI * 2 * cycles + ph;
+      // FM from snare: modulator warps the carrier phase
+      const fmMod = fm > 0.01 ? Math.sin(t * 3.73 + ph * 0.5) * fm * 18 : 0;
+      // Composite: fundamental + harmonics (richer = more aggressive)
+      let v = Math.sin(t + fmMod)
+            + Math.sin(t * 2 + 0.8)  * 0.42
+            + Math.sin(t * 3 + 1.6)  * 0.18
+            + Math.sin(t * 5 + 2.4)  * 0.08;
+      v *= amp;
+      // Hard clip on kick → flat-top square-wave look
+      if (dist > 0.04) {
+        const lim = amp * (1.0 - dist * 0.65);
+        v = Math.max(-lim, Math.min(lim, v * (1 + dist * 1.6)));
+      }
+      wave[x] = Math.round(cy + v);
     }
 
-    // Kick flash — brief bright overlay
-    if (kick > 7) {
-      ctx.fillStyle = G2;
-      ctx.globalAlpha = ((kick - 7) / 10) * 0.35;
+    // ── Draw 3 glow passes (CRT phosphor layers) ─────────
+    const passes = [
+      { shift:  1, color: '#336633', alpha: 0.45 },
+      { shift:  0, color: '#8bac0f', alpha: 1.00 },
+      { shift: -1, color: '#d4f020', alpha: 0.35 },
+    ];
+    for (const p of passes) {
+      ctx.fillStyle  = p.color;
+      ctx.globalAlpha = p.alpha;
+      for (let x = 0; x < W - 1; x++) {
+        const y1 = wave[x]     + p.shift;
+        const y2 = wave[x + 1] + p.shift;
+        const minY = Math.max(0,      Math.min(y1, y2));
+        const maxY = Math.min(H - 13, Math.max(y1, y2));
+        ctx.fillRect(x, minY, 1, Math.max(1, maxY - minY + 1));
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Kick: bright full-screen flash
+    if (kick > 5) {
+      ctx.fillStyle   = '#9bbc0f';
+      ctx.globalAlpha = ((kick - 5) / 5) * 0.4;
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
     }
-
-    // Scan-line marker (advancing vertical cursor driven by beat phase)
-    const scan = Math.floor((frame * 2) % W);
-    ctx.fillStyle = G3;
-    ctx.fillRect(scan, 0, 1, H - 12);
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = G2;
-    ctx.fillRect((scan + 1) % W, 0, 1, H - 12);
-    ctx.globalAlpha = 1;
 
     // Step dots at bottom
     const stepN = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
     for (let i = 0; i < 16; i++) {
       const active = i === stepN;
-      ctx.fillStyle = active ? G3 : G1;
+      ctx.fillStyle = active ? '#9bbc0f' : '#306230';
       ctx.fillRect(i * 10, H - 7, 9, active ? 7 : 2);
     }
 
-    this._drawText(('00' + beat).slice(-3), 2, 2, G2, 1);
+    this._drawText(('00' + beat).slice(-3), 2, 2, '#8bac0f', 1);
   }
 }
 
