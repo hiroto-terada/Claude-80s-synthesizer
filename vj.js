@@ -1168,6 +1168,64 @@ class VJDisplay {
       ctx.restore();
     }
 
+    // ── Disco ball reflections ────────────────────────────
+    const dbX = 80, dbY = 14, dbR = 7;
+    for (let i = 0; i < 18; i++) {
+      const speed = 0.011 + (i % 5) * 0.003;
+      const ang   = (i / 18) * Math.PI * 2 + frame * speed;
+      const dist  = 48 + (i % 4) * 14;
+      let sx, sy;
+      if (i < 10) {
+        // Floor-level sweep
+        sx = dbX + Math.cos(ang) * dist;
+        sy = groundY - 2 - Math.abs(Math.sin(ang * 0.6)) * 10;
+      } else {
+        // Upper wall / background scatter
+        sx = dbX + Math.cos(ang * 1.4 + 1.1) * (dist * 0.65);
+        sy = 6 + Math.abs(Math.sin(ang * 0.8)) * 36;
+      }
+      if (sx < 1 || sx > W - 1 || sy < 1 || sy > groundY - 4) continue;
+      const phase  = (i * 5 + frame * 0.09) % (Math.PI * 2);
+      const bright = (Math.sin(phase) + 1) * 0.5;
+      const sz = (kick > 5 || bright > 0.82) ? 2 : 1;
+      if (kick > 4)       ctx.fillStyle = G3;
+      else if (bright > 0.72) ctx.fillStyle = G3;
+      else if (bright > 0.32) ctx.fillStyle = G2;
+      else continue;
+      ctx.fillRect(Math.round(sx) - (sz >> 1), Math.round(sy) - (sz >> 1), sz, sz);
+    }
+
+    // ── Disco ball (center top) ───────────────────────────
+    // Hanging wire
+    ctx.fillStyle = G1;
+    ctx.fillRect(dbX, 0, 1, dbY - dbR + 1);
+    // Ball body
+    ctx.fillStyle = G1;
+    ctx.beginPath();
+    ctx.arc(dbX, dbY, dbR, 0, Math.PI * 2);
+    ctx.fill();
+    // Horizontal grid lines
+    ctx.fillStyle = G0;
+    for (let dy = -dbR + 2; dy <= dbR; dy += 3) {
+      const hw = Math.round(Math.sqrt(Math.max(0, dbR * dbR - dy * dy)));
+      if (hw > 0) ctx.fillRect(dbX - hw, dbY + dy, hw * 2, 1);
+    }
+    // Vertical grid lines (scroll with frame for spin effect)
+    const vOff = Math.round((frame * 0.35) % 4);
+    for (let vx = dbX - dbR + vOff; vx <= dbX + dbR; vx += 4) {
+      const vxr = vx - dbX;
+      const hh  = Math.round(Math.sqrt(Math.max(0, dbR * dbR - vxr * vxr)));
+      if (hh > 0) ctx.fillRect(Math.round(vx), dbY - hh, 1, hh * 2);
+    }
+    // Rotating glint on ball surface
+    const glintAng = frame * 0.07;
+    const gx = dbX + Math.cos(glintAng) * (dbR - 2);
+    const gy = dbY + Math.sin(glintAng) * (dbR - 2);
+    ctx.fillStyle = G3;
+    ctx.fillRect(Math.round(gx) - 1, Math.round(gy) - 1, 2, 2);
+    ctx.fillStyle = G2;
+    ctx.fillRect(Math.round(gx + 2), Math.round(gy - 1), 1, 1);
+
     // ── Draw each dancer ──────────────────────────────────
     for (const d of this._dancers) {
       const ph = this._dancePhase + d.phase;
