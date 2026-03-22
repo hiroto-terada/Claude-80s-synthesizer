@@ -84,6 +84,10 @@ class VJDisplay {
     this._sDist  = 0;    // smoothed distortion (kick)
     this._sFm    = 0;    // smoothed FM modulation depth (snare)
 
+    // Matrix mode: note reactivity
+    this._mtxNoteFlash = 0;   // countdown frames for note glow
+    this._mtxNoteCol   = 13;  // highlighted column (derived from pitch)
+
     // Stars for SOFT mode
     this._stars = Array.from({ length: 30 }, () => ({
       x: Math.random() * 160, y: Math.random() * 144,
@@ -108,6 +112,11 @@ class VJDisplay {
   // Called when a melody/chord/keyboard note is triggered
   onNote(midi) {
     this._scopeNote = midi;
+    // Matrix: map pitch to column index and trigger glow
+    const numCols = this._matrixCols ? this._matrixCols.length : 26;
+    this._mtxNoteCol   = Math.max(0, Math.min(numCols - 1,
+      Math.round(((midi - 36) / 48) * (numCols - 1))));
+    this._mtxNoteFlash = 40;
     // Pitch → horizontal world position (C4=60 → center, ±1 octave = ±gSize*1.5)
     const worldX = ((midi - 60) / 12) * 48;
     // Spawn block with slight Z jitter so chords spread
@@ -864,70 +873,116 @@ class VJDisplay {
   // ────────────────────────────────────────────────────────
   _renderMatrix() {
     const { ctx, W, H, frame, kick, snare } = this;
-    const G0 = '#0f380f';
-    const G1 = '#306230';
-    const G2 = '#8bac0f';
-    const G3 = '#9bbc0f';
 
-    // Black background with very faint green tint
+    // Black background
     ctx.fillStyle = '#000800';
     ctx.fillRect(0, 0, W, H);
 
     const { _mtxCW: CW, _mtxCH: CH, _mtxRows: ROWS, _mtxChars: CHARS } = this;
-    const step = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
+    const numCols = this._matrixCols.length;
+    const step    = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
+
+    // Note reactivity state
+    if (this._mtxNoteFlash > 0) this._mtxNoteFlash--;
+    const noteFade = this._mtxNoteFlash / 40;   // 1→0 over 40 frames
+    const noteCol  = this._mtxNoteCol;
 
     ctx.font = `bold ${CH - 1}px monospace`;
     ctx.textAlign = 'left';
 
-    for (let c = 0; c < this._matrixCols.length; c++) {
-      const col = this._matrixCols[c];
-      const x   = c * CW;
+    for (let c = 0; c < numCols; c++) {
+      const col  = this._matrixCols[c];
+      const x    = c * CW;
 
-      // Advance head (kicks accelerate streams)
-      col.head += col.speed * (kick > 0 ? 2.5 : 1);
+      // Distance from note-highlighted column (0 = exact match)
+      const noteDist  = Math.abs(c - noteCol);
+      const noteBoost = noteFade > 0 && noteDist <= 3
+        ? (1 - noteDist / 4) * noteFade : 0;
+
+      // ── Advance head ───────────────────────────────────
+      const speedMul = (kick > 0 ? 2.5 : 1) + noteBoost * 2;
+      col.head += col.speed * speedMul;
       if (col.head > ROWS + col.len) {
         col.head  = -(2 + Math.random() * ROWS);
         col.speed = 0.08 + Math.random() * 0.14;
         col.len   = 6 + Math.floor(Math.random() * 10);
       }
 
-      // Randomly flicker one character per column every few frames
-      if (frame % 4 === c % 4) {
-        const r = Math.floor(Math.random() * ROWS);
-        col.chars[r] = CHARS[Math.floor(Math.random() * CHARS.length)];
+      // ── Character mutation ─────────────────────────────
+      // Snare: burst-mutate ALL chars in ALL columns
+      if (snare > 0) {
+        for (let m = 0; m < snare; m++)
+          col.chars[Math.floor(Math.random() * ROWS)] =
+            CHARS[Math.floor(Math.random() * CHARS.length)];
+      } else {
+        // Normal: 1 char per 4 frames; note columns flicker 2x faster
+        const rate = noteBoost > 0.4 ? 2 : 4;
+        if (frame % rate === c % rate) {
+          col.chars[Math.floor(Math.random() * ROWS)] =
+            CHARS[Math.floor(Math.random() * CHARS.length)];
+        }
       }
 
+      // ── Draw trail ─────────────────────────────────────
       const headRow = Math.floor(col.head);
-
       for (let t = 0; t < col.len; t++) {
         const row = headRow - t;
         if (row < 0 || row >= ROWS) continue;
         const y = row * CH;
 
         if (t === 0) {
-          // Head: white flash
           ctx.fillStyle = '#ffffff';
         } else {
-          // Trail: bright → mid → dark green
           const ratio = t / col.len;
-          if      (ratio < 0.15) ctx.fillStyle = '#9bef9b';
-          else if (ratio < 0.45) ctx.fillStyle = '#00cc00';
-          else if (ratio < 0.75) ctx.fillStyle = '#008800';
-          else                   ctx.fillStyle = '#004400';
+          if (noteBoost > 0.3) {
+            // Note-highlighted: vivid lime pulse
+            if      (ratio < 0.15) ctx.fillStyle = '#ccffcc';
+            else if (ratio < 0.45) ctx.fillStyle = '#00ff44';
+            else if (ratio < 0.75) ctx.fillStyle = '#00aa22';
+            else                   ctx.fillStyle = '#005511';
+          } else {
+            // Default
+            if      (ratio < 0.15) ctx.fillStyle = '#9bef9b';
+            else if (ratio < 0.45) ctx.fillStyle = '#00cc00';
+            else if (ratio < 0.75) ctx.fillStyle = '#008800';
+            else                   ctx.fillStyle = '#004400';
+          }
         }
         ctx.fillText(col.chars[row], x, y + CH - 2);
       }
     }
 
-    // Snare: brief white shimmer
-    if (snare > 4) {
-      ctx.fillStyle = '#00ff00';
-      ctx.globalAlpha = (snare - 4) / 6 * 0.15;
-      ctx.fillRect(0, 0, W, H);
+    // ── Kick: shockwave line sweeping down ─────────────────
+    if (kick > 0) {
+      const shockY = Math.floor(((10 - kick) / 10) * (H - 8));
+      ctx.fillStyle = kick > 7 ? '#aaffaa' : '#00ff00';
+      ctx.globalAlpha = kick / 10;
+      ctx.fillRect(0, shockY, W, kick > 7 ? 2 : 1);
       ctx.globalAlpha = 1;
     }
 
-    // Step dots at bottom
+    // ── Snare: random column flash ──────────────────────────
+    if (snare > 3) {
+      ctx.globalAlpha = (snare - 3) / 3 * 0.5;
+      for (let sc = 0; sc < 4; sc++) {
+        ctx.fillStyle = sc % 2 === 0 ? '#00ff00' : '#004400';
+        ctx.fillRect(Math.floor(Math.random() * numCols) * CW, 0, CW, H);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Note: column glow overlay ───────────────────────────
+    if (noteFade > 0.05) {
+      for (let nc = Math.max(0, noteCol - 3); nc <= Math.min(numCols - 1, noteCol + 3); nc++) {
+        const d = Math.abs(nc - noteCol);
+        ctx.fillStyle = '#00ff44';
+        ctx.globalAlpha = (1 - d / 4) * noteFade * 0.18;
+        ctx.fillRect(nc * CW, 0, CW, H);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Step dots ──────────────────────────────────────────
     ctx.textAlign = 'left';
     for (let i = 0; i < 16; i++) {
       const active = i === step;
@@ -935,7 +990,7 @@ class VJDisplay {
       ctx.fillRect(i * 10, H - 7, 9, active ? 7 : 3);
     }
 
-    this._drawText(('00' + Math.floor(frame / 60)).slice(-3), 2, 2, G2, 1);
+    this._drawText(('00' + Math.floor(frame / 60)).slice(-3), 2, 2, '#8bac0f', 1);
   }
 
   // ────────────────────────────────────────────────────────
