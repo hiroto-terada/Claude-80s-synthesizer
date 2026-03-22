@@ -93,6 +93,14 @@ class VJDisplay {
       x: Math.random() * 160, y: Math.random() * 144,
       t: Math.random() * Math.PI * 2,
     }));
+
+    // DANCE mode: two stick figures
+    this._dancers = [
+      { cx: 50,  phase: 0              },
+      { cx: 110, phase: Math.PI * 0.75 },
+    ];
+    this._danceAmp   = 0.5;
+    this._dancePhase = 0;
   }
 
   start() { this._loop(); }
@@ -146,6 +154,7 @@ class VJDisplay {
       case 'art':     this._renderArt();     break;
       case 'matrix':  this._renderMatrix();  break;
       case 'scope':   this._renderScope();   break;
+      case 'dance':   this._renderDance();   break;
     }
   }
 
@@ -1092,6 +1101,199 @@ class VJDisplay {
 
     this._drawText(('00' + beat).slice(-3), 2, 2, '#8bac0f', 1);
   }
+
+  // ────────────────────────────────────────────────────────
+  // DANCE — stick figures dancing to the beat
+  // ────────────────────────────────────────────────────────
+  _renderDance() {
+    const { ctx, W, H, frame, kick, snare } = this;
+    const beat = this.beat;
+
+    // Palette
+    const G0 = '#0f380f';
+    const G1 = '#306230';
+    const G2 = '#8bac0f';
+    const G3 = '#9bbc0f';
+
+    const groundY = H - 18;   // 126px
+
+    // ── Smooth dance amplitude (kick/snare drive energy) ──
+    const targetAmp = 0.5 + kick * 0.055 + snare * 0.04;
+    this._danceAmp += (targetAmp - this._danceAmp) * 0.18;
+
+    // ── Advance shared phase (pitch-responsive) ──────────
+    const noteSpeed = Math.pow(2, (this._scopeNote - 60) / 12);
+    this._dancePhase += 0.07 * noteSpeed * (1 + kick * 0.12);
+
+    // ── Background: dark with G1 gradient bands ──────────
+    ctx.fillStyle = G0;
+    ctx.fillRect(0, 0, W, H);
+    // Subtle sky bands
+    for (let y = 0; y < groundY - 20; y++) {
+      if (y % 12 < 3) {
+        ctx.fillStyle = G1;
+        ctx.globalAlpha = 0.18;
+        ctx.fillRect(0, y, W, 1);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // ── Scrolling checkerboard dance floor ───────────────
+    const tW = 16, tH = 8;
+    const floorScroll = Math.floor(frame * 1.2) % tW;
+    for (let ty = groundY; ty < H - 12; ty += tH) {
+      for (let tx = -floorScroll; tx < W; tx += tW) {
+        const checker = (Math.floor(tx / tW) + Math.floor(ty / tH)) & 1;
+        ctx.fillStyle = checker ? G1 : G0;
+        ctx.fillRect(tx, ty, tW, tH);
+      }
+    }
+    // Floor highlight line
+    ctx.fillStyle = G2;
+    ctx.fillRect(0, groundY, W, 1);
+
+    // ── Spotlight cones behind dancers ───────────────────
+    for (const d of this._dancers) {
+      const coneH = groundY - 8;
+      ctx.save();
+      ctx.globalAlpha = 0.08 + kick * 0.015;
+      ctx.fillStyle = G2;
+      ctx.beginPath();
+      ctx.moveTo(d.cx, 8);
+      ctx.lineTo(d.cx - coneH * 0.35, groundY);
+      ctx.lineTo(d.cx + coneH * 0.35, groundY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // ── Draw each dancer ──────────────────────────────────
+    for (const d of this._dancers) {
+      const ph = this._dancePhase + d.phase;
+      this._drawDancer(d.cx, groundY, ph, kick, snare, this._danceAmp, G2, G3);
+    }
+
+    // ── Kick flash ────────────────────────────────────────
+    if (kick > 6) {
+      ctx.fillStyle   = G3;
+      ctx.globalAlpha = ((kick - 6) / 4) * 0.35;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Step dots HUD ─────────────────────────────────────
+    const stepN = this.step >= 0 ? this.step : Math.floor(frame / 8) % 16;
+    for (let i = 0; i < 16; i++) {
+      const active = i === stepN;
+      ctx.fillStyle = active ? G3 : G1;
+      ctx.fillRect(i * 10, H - 7, 9, active ? 7 : 2);
+    }
+    this._drawText(('00' + beat).slice(-3), 2, 2, G2, 1);
+  }
+
+  // Draw a single stick figure at (cx, groundY) with forward kinematics
+  _drawDancer(cx, groundY, ph, kick, snare, amp, colorMain, colorAccent) {
+    const ctx = this.ctx;
+
+    // Body metrics (pixels)
+    const TORSO  = 20;
+    const UPPER  = 11;   // upper arm / thigh
+    const LOWER  = 10;   // forearm / shin
+    const HEAD_R =  5;
+
+    // ── Motion parameters ─────────────────────────────────
+    const bounce  = Math.sin(ph * 2) * (5 + kick * 2.0) * amp;   // vertical bob
+    const sway    = Math.sin(ph)     * (3 + kick * 1.5) * amp;    // lateral sway
+    const fsnap   = snare > 0 ? (snare / 6) * 6 : 0;              // forward lean snap
+
+    // ── Key joint positions ───────────────────────────────
+    const hipY    = groundY - 4;                    // hip stays near floor
+    const hipX    = cx + sway * 0.6;
+    const chestX  = hipX + sway * 0.4 + fsnap * 0.5;
+    const chestY  = hipY - TORSO + bounce;
+    const headX   = chestX + sway * 0.2;
+    const headY   = chestY - HEAD_R - 2;
+
+    // ── Arm angles ────────────────────────────────────────
+    const armSwing   = Math.sin(ph)   * (Math.PI / 3) * (0.5 + kick * 0.06) * amp;
+    const armPunch   = snare > 0 ? (snare / 6) * 0.65 : 0;   // outward punch
+    const lArmAngle1 = -Math.PI * 0.35 + armSwing + armPunch;
+    const rArmAngle1 = -Math.PI * 0.35 - armSwing + armPunch;
+    const lArmAngle2 =  Math.PI * 0.5  - armSwing * 0.6;
+    const rArmAngle2 =  Math.PI * 0.5  + armSwing * 0.6;
+
+    // ── Leg angles ────────────────────────────────────────
+    const legStep    = Math.sin(ph * 2) * (Math.PI / 4) * (0.6 + kick * 0.06) * amp;
+    const lLegAngle1 = Math.PI * 0.1 + legStep;
+    const rLegAngle1 = Math.PI * 0.1 - legStep;
+    const lLegAngle2 = Math.PI * 0.6 + legStep * 0.5;
+    const rLegAngle2 = Math.PI * 0.6 - legStep * 0.5;
+
+    // ── Helper: endpoint from joint ───────────────────────
+    function jnt(x, y, ang, len) {
+      return [x + Math.sin(ang) * len, y + Math.cos(ang) * len];
+    }
+
+    // Compute joints
+    const [lShoX, lShoY]  = [chestX - 4, chestY];
+    const [rShoX, rShoY]  = [chestX + 4, chestY];
+    const [lElbX, lElbY]  = jnt(lShoX, lShoY, lArmAngle1, UPPER);
+    const [rElbX, rElbY]  = jnt(rShoX, rShoY, rArmAngle1, UPPER);
+    const [lHndX, lHndY]  = jnt(lElbX, lElbY, lArmAngle1 + lArmAngle2 - Math.PI * 0.5, LOWER);
+    const [rHndX, rHndY]  = jnt(rElbX, rElbY, rArmAngle1 + rArmAngle2 - Math.PI * 0.5, LOWER);
+    const [lKneX, lKneY]  = jnt(hipX - 3, hipY, lLegAngle1, UPPER);
+    const [rKneX, rKneY]  = jnt(hipX + 3, hipY, rLegAngle1, UPPER);
+    const [lFtX,  lFtY]   = jnt(lKneX, lKneY, lLegAngle1 + lLegAngle2 - Math.PI * 0.4, LOWER);
+    const [rFtX,  rFtY]   = jnt(rKneX, rKneY, rLegAngle1 + rLegAngle2 - Math.PI * 0.4, LOWER);
+
+    // ── Shadow on floor ───────────────────────────────────
+    ctx.save();
+    ctx.globalAlpha = 0.25 + kick * 0.04;
+    ctx.fillStyle = colorMain;
+    ctx.beginPath();
+    ctx.ellipse(cx, groundY, 12, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // ── Draw limbs ────────────────────────────────────────
+    ctx.lineWidth = 2;
+    ctx.lineCap   = 'round';
+
+    // Choose accent color on snare hit
+    const col = snare > 3 ? colorAccent : colorMain;
+
+    function seg(x1, y1, x2, y2, c) {
+      ctx.strokeStyle = c || col;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x1), Math.round(y1));
+      ctx.lineTo(Math.round(x2), Math.round(y2));
+      ctx.stroke();
+    }
+
+    // Legs (behind body)
+    seg(hipX - 3, hipY, lKneX, lKneY);
+    seg(lKneX, lKneY, lFtX, lFtY);
+    seg(hipX + 3, hipY, rKneX, rKneY);
+    seg(rKneX, rKneY, rFtX, rFtY);
+
+    // Torso
+    seg(hipX, hipY, chestX, chestY, colorAccent);
+
+    // Arms
+    seg(lShoX, lShoY, lElbX, lElbY);
+    seg(lElbX, lElbY, lHndX, lHndY);
+    seg(rShoX, rShoY, rElbX, rElbY);
+    seg(rElbX, rElbY, rHndX, rHndY);
+
+    // Head
+    ctx.strokeStyle = snare > 2 ? colorAccent : colorMain;
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.arc(Math.round(headX), Math.round(headY), HEAD_R, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
 }
 
 // ── UI 初期化 ──────────────────────────────────────────────

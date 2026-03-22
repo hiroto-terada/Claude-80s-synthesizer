@@ -108,6 +108,7 @@
     <button class="style-btn"        data-style="art">ART</button>
     <button class="style-btn"        data-style="matrix">MATRIX</button>
     <button class="style-btn"        data-style="scope">SCOPE</button>
+    <button class="style-btn"        data-style="dance">DANCE</button>
   </div>
   <div style="display:flex;gap:5px">
     <button id="auto-cycle-btn">AUTO SCENE: OFF</button>
@@ -426,7 +427,7 @@
   const display = new VJDisplay(canvas);
 
   // ── Scene auto-cycling on pattern bank switch ────────────
-  const SCENES = ['digital', 'soft', 'art', 'matrix', 'scope'];
+  const SCENES = ['digital', 'soft', 'art', 'matrix', 'scope', 'dance'];
   let sceneIndex    = 0;
   let autoSceneCycle = false;   // default: OFF
   let _lastCycleMs  = 0;        // debounce: seq1+seq2 both fire pc_seq_update
@@ -468,9 +469,9 @@
     btns.forEach(b => b.classList.toggle('active', b.dataset.style === s));
   }
 
-  // Keyboard shortcuts: 1=DIGITAL 2=SOFT 3=ART 4=MATRIX 5=SCOPE
+  // Keyboard shortcuts: 1=DIGITAL 2=SOFT 3=ART 4=MATRIX 5=SCOPE 6=DANCE
   document.addEventListener('keydown', e => {
-    const map = { '1': 'digital', '2': 'soft', '3': 'art', '4': 'matrix', '5': 'scope' };
+    const map = { '1': 'digital', '2': 'soft', '3': 'art', '4': 'matrix', '5': 'scope', '6': 'dance' };
     if (map[e.key]) { setStyle(map[e.key]); sceneIndex = SCENES.indexOf(map[e.key]); }
     // F = fullscreen toggle
     if (e.key === 'f' || e.key === 'F') {
