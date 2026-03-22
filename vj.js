@@ -1229,7 +1229,7 @@ class VJDisplay {
     // ── Draw each dancer ──────────────────────────────────
     for (const d of this._dancers) {
       const ph = this._dancePhase + d.phase;
-      this._drawDancer(d.cx, groundY, ph, kick, snare, this._danceAmp, G2, G3);
+      this._drawDancer(d.cx, groundY, ph, kick, snare, this._danceAmp, G2, G3, beat, frame);
     }
 
     // ── Kick flash ────────────────────────────────────────
@@ -1250,178 +1250,243 @@ class VJDisplay {
     this._drawText(('00' + beat).slice(-3), 2, 2, G2, 1);
   }
 
-  // Draw a volumetric human figure — MJ-style pose-based animation
-  _drawDancer(cx, groundY, ph, kick, snare, amp, colorMain, colorAccent) {
+  // Breakdancing human with clothes (cap + hoodie + baggy pants + sneakers)
+  // move 0: toprock, move 1: windmill, move 2: freeze — cycling every 8 beats
+  _drawDancer(cx, groundY, ph, kick, snare, amp, colorMain, colorAccent, beat, frame) {
     const ctx = this.ctx;
     const G0 = '#0f380f', G1 = '#306230';
 
-    // Bone lengths
-    const TORSO = 17, UA = 9, LA = 8, UL = 12, LL = 11, HR = 6;
+    const TORSO = 17, UL = 13, LL = 11, HR = 6;
+    const moveId = Math.floor(beat / 8) % 3;   // 0=toprock 1=windmill 2=freeze
 
-    // ── Snappy hip pop (tanh = soft square wave) ──────────
-    const snapRaw = Math.tanh(Math.sin(ph * 2) * 4);
-    const snap    = snapRaw * (5 + kick * 2.5) * amp;
-    const bob     = -Math.abs(Math.sin(ph * 2)) * (3 + kick * 2.0) * amp;
-    const lean    = snare > 0 ? (snare / 6) * 6 : 0;
+    let head, chest, hip, lSho, rSho, lHip, rHip, lElb, rElb, lHnd, rHnd, lKne, rKne, lFt, rFt;
 
-    // ── Joints ────────────────────────────────────────────
-    const hipX   = cx + snap * 0.8;
-    const hipY   = groundY - 4;
-    const chestX = cx - snap * 0.2 + lean * 0.35;
-    const chestY = hipY - TORSO + bob;
-    const headX  = chestX - snap * 0.5;
-    const headY  = chestY - HR - 3;
-    const lShoX  = chestX - 6, lShoY = chestY + 1;
-    const rShoX  = chestX + 6, rShoY = chestY + 1;
+    // ── MOVE 0: TOPROCK (b-boy cross-step) ───────────────
+    if (moveId === 0) {
+      const snapRaw = Math.tanh(Math.sin(ph * 2) * 4);
+      const snap    = snapRaw * (5 + kick * 2.0) * amp;
+      const bob     = -Math.abs(Math.sin(ph * 2)) * (3 + kick * 1.5) * amp;
+      const armPh   = Math.sin(ph);
 
-    // ── Arms: pose interpolation (MJ asymmetric) ─────────
-    const t = (snapRaw + 1) * 0.5;
-    const rt = 1 - t;
+      hip   = { x: cx + snap * 0.8,      y: groundY - 4 };
+      chest = { x: cx - snap * 0.2,      y: hip.y - TORSO + bob };
+      head  = { x: chest.x - snap * 0.5, y: chest.y - HR - 3 };
+      lSho  = { x: chest.x - 6,  y: chest.y + 1 };
+      rSho  = { x: chest.x + 6,  y: chest.y + 1 };
+      lHip  = { x: hip.x - 3,    y: hip.y };
+      rHip  = { x: hip.x + 3,    y: hip.y };
 
-    const lElbX_up = lShoX - 4,  lElbY_up = lShoY - 8;
-    const lHndX_up = lElbX_up - 2, lHndY_up = lElbY_up - LA + 1;
-    const lElbX_lo = lShoX - UA, lElbY_lo = lShoY + 4;
-    const lHndX_lo = lElbX_lo - 3, lHndY_lo = lElbY_lo + 6;
-    const lElbX = lElbX_up * t + lElbX_lo * (1 - t);
-    const lElbY = lElbY_up * t + lElbY_lo * (1 - t);
-    const lHndX = lHndX_up * t + lHndX_lo * (1 - t);
-    const lHndY = lHndY_up * t + lHndY_lo * (1 - t);
+      // Arms: one fist up, one swinging low
+      lElb  = { x: lSho.x - 3,   y: lSho.y - 7 + armPh * 2 };
+      lHnd  = { x: lElb.x - 2,   y: lElb.y - 7 };
+      rElb  = { x: rSho.x + 7,   y: rSho.y + 3 - armPh * 3 };
+      rHnd  = { x: rElb.x + 3,   y: rElb.y + 5 };
 
-    const rElbX_up = rShoX + 4,  rElbY_up = rShoY - 8;
-    const rHndX_up = rElbX_up + 2, rHndY_up = rElbY_up - LA + 1;
-    const rElbX_lo = rShoX + UA, rElbY_lo = rShoY + 4;
-    const rHndX_lo = rElbX_lo + 3, rHndY_lo = rElbY_lo + 6;
-    const rElbX = rElbX_up * rt + rElbX_lo * (1 - rt);
-    const rElbY = rElbY_up * rt + rElbY_lo * (1 - rt);
-    const rHndX = rHndX_up * rt + rHndX_lo * (1 - rt);
-    const rHndY = rHndY_up * rt + rHndY_lo * (1 - rt);
+      // Cross-step legs
+      const t = (snapRaw + 1) * 0.5, rt = 1 - t;
+      lKne  = { x: hip.x - 3 + (t  > 0.55 ? -3 : -1), y: hip.y + UL * (t  > 0.55 ? 0.65 : 0.95) };
+      lFt   = { x: hip.x - 3 + (t  > 0.55 ?  5 : -1), y: t  > 0.55 ? lKne.y + LL * 0.55 : groundY - 2 };
+      rKne  = { x: hip.x + 3 + (rt > 0.55 ?  3 :  1), y: hip.y + UL * (rt > 0.55 ? 0.65 : 0.95) };
+      rFt   = { x: hip.x + 3 + (rt > 0.55 ? -5 :  1), y: rt > 0.55 ? rKne.y + LL * 0.55 : groundY - 2 };
 
-    const punchX = snare > 0 ? (snare / 6) * 5 : 0;
-    const punchY = snare > 0 ? -(snare / 6) * 3 : 0;
+    // ── MOVE 1: WINDMILL (floor spin, legs circle) ────────
+    } else if (moveId === 1) {
+      const spinAng = ph * 3;
+      const bodyY   = groundY - 11;
 
-    // ── Legs: weight-shift stance ─────────────────────────
-    const lHipX = hipX - 3, rHipX = hipX + 3;
-    const lKneX = lHipX + (t > 0.55 ? -3 : -1);
-    const lKneY = hipY + UL * (t > 0.55 ? 0.65 : 0.95);
-    const lFtX  = lHipX + (t > 0.55 ? 5 : -1);
-    const lFtY  = t > 0.55 ? lKneY + LL * 0.55 : groundY - 2;
+      head  = { x: cx - 16, y: groundY - HR };
+      chest = { x: cx - 6,  y: bodyY - 1 };
+      hip   = { x: cx + 5,  y: bodyY };
+      lSho  = { x: chest.x - 5, y: chest.y };
+      rSho  = { x: chest.x + 5, y: chest.y };
+      lHip  = { x: hip.x - 3,   y: hip.y };
+      rHip  = { x: hip.x + 3,   y: hip.y };
 
-    const rKneX = rHipX + (rt > 0.55 ? 3 : 1);
-    const rKneY = hipY + UL * (rt > 0.55 ? 0.65 : 0.95);
-    const rFtX  = rHipX + (rt > 0.55 ? -5 : 1);
-    const rFtY  = rt > 0.55 ? rKneY + LL * 0.55 : groundY - 2;
+      // Arms bracing on floor
+      lElb  = { x: cx - 13, y: bodyY + 5 };
+      lHnd  = { x: cx - 17, y: groundY - 2 };
+      rElb  = { x: cx - 1,  y: bodyY + 6 };
+      rHnd  = { x: cx + 1,  y: groundY - 2 };
 
-    // ── Convenience ──────────────────────────────────────
-    const lEx = lElbX - punchX, lEy = lElbY + punchY;
-    const rEx = rElbX + punchX, rEy = rElbY + punchY;
+      // Legs spinning in full 360°
+      const hx = hip.x, hy = hip.y;
+      lKne  = { x: hx + Math.cos(spinAng)           * UL,            y: hy + Math.sin(spinAng)           * UL };
+      lFt   = { x: hx + Math.cos(spinAng + 0.5)     * (UL + LL*0.7), y: hy + Math.sin(spinAng + 0.5)     * (UL + LL*0.7) };
+      rKne  = { x: hx + Math.cos(spinAng + Math.PI) * UL,            y: hy + Math.sin(spinAng + Math.PI) * UL };
+      rFt   = { x: hx + Math.cos(spinAng + Math.PI + 0.5) * (UL + LL*0.7), y: hy + Math.sin(spinAng + Math.PI + 0.5) * (UL + LL*0.7) };
+
+    // ── MOVE 2: FREEZE (L-freeze, horizontal body) ────────
+    } else {
+      const wobble = Math.sin(ph * 4) * 0.8 * amp;
+      const bodyY  = groundY - 16 + wobble;
+
+      head  = { x: cx - 17, y: bodyY };
+      chest = { x: cx - 7,  y: bodyY };
+      hip   = { x: cx + 5,  y: bodyY + 1 };
+      lSho  = { x: chest.x - 4, y: chest.y };
+      rSho  = { x: chest.x + 4, y: chest.y };
+      lHip  = { x: hip.x - 3,   y: hip.y };
+      rHip  = { x: hip.x + 3,   y: hip.y };
+
+      // Left arm: support (straight to floor)
+      lElb  = { x: cx - 13, y: bodyY + 9 };
+      lHnd  = { x: cx - 15, y: groundY - 3 };
+      // Right arm: stylish upward extension
+      rElb  = { x: chest.x + 5,  y: bodyY - 8 };
+      rHnd  = { x: chest.x + 11, y: bodyY - 15 };
+
+      // Legs: L-shape
+      lKne  = { x: hip.x + 7,  y: bodyY - 8 };
+      lFt   = { x: hip.x + 15, y: bodyY - 4 };
+      rKne  = { x: hip.x + 7,  y: bodyY + 9 };
+      rFt   = { x: hip.x + 14, y: bodyY + 6 };
+    }
+
+    // Snare punch
+    const px = snare > 0 ? (snare / 6) * 4 : 0;
+    const py = snare > 0 ? -(snare / 6) * 2 : 0;
+    lHnd.x -= px; lHnd.y += py;
+    rHnd.x += px; rHnd.y += py;
+
     const col = snare > 3 ? colorAccent : colorMain;
 
     ctx.lineCap  = 'round';
     ctx.lineJoin = 'round';
 
-    // Draw a limb segment: G1 outline then colorMain fill
-    function limb(x1, y1, x2, y2, w) {
-      ctx.strokeStyle = G1;
-      ctx.lineWidth   = w + 2;
+    // ── Helpers ───────────────────────────────────────────
+    // Capsule segment: G1 outline then fc fill
+    function seg(p1, p2, w, fc) {
+      ctx.strokeStyle = G1; ctx.lineWidth = w + 2;
       ctx.beginPath();
-      ctx.moveTo(Math.round(x1), Math.round(y1));
-      ctx.lineTo(Math.round(x2), Math.round(y2));
+      ctx.moveTo(Math.round(p1.x), Math.round(p1.y));
+      ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
       ctx.stroke();
-      ctx.strokeStyle = col;
-      ctx.lineWidth   = w;
+      ctx.strokeStyle = fc; ctx.lineWidth = w;
       ctx.beginPath();
-      ctx.moveTo(Math.round(x1), Math.round(y1));
-      ctx.lineTo(Math.round(x2), Math.round(y2));
+      ctx.moveTo(Math.round(p1.x), Math.round(p1.y));
+      ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
       ctx.stroke();
     }
 
-    // Draw a joint circle: outline then fill
-    function jdot(x, y, r, fc) {
+    // Filled circle: G1 outline then fc fill
+    function jdot(p, r, fc) {
       ctx.fillStyle = G1;
       ctx.beginPath();
-      ctx.arc(Math.round(x), Math.round(y), r + 1, 0, Math.PI * 2);
+      ctx.arc(Math.round(p.x), Math.round(p.y), r + 1, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = fc;
       ctx.beginPath();
-      ctx.arc(Math.round(x), Math.round(y), r, 0, Math.PI * 2);
+      ctx.arc(Math.round(p.x), Math.round(p.y), r, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // ── Shadow ────────────────────────────────────────────
+    // ── Shadow ellipse ────────────────────────────────────
     ctx.save();
-    ctx.globalAlpha = 0.28 + kick * 0.04;
-    ctx.fillStyle = colorMain;
+    ctx.globalAlpha = 0.25 + kick * 0.04;
+    ctx.fillStyle   = colorMain;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY, 12, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY, 13, 3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // ── Legs: thigh(5px) → shin(4px) ─────────────────────
-    limb(lHipX, hipY, lKneX, lKneY, 5);
-    limb(lKneX, lKneY, lFtX, lFtY, 4);
-    limb(rHipX, hipY, rKneX, rKneY, 5);
-    limb(rKneX, rKneY, rFtX, rFtY, 4);
-    // Feet — short horizontal bar
-    ctx.strokeStyle = G1;  ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(Math.round(lFtX) - 3, Math.round(lFtY)); ctx.lineTo(Math.round(lFtX) + 3, Math.round(lFtY)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(Math.round(rFtX) - 3, Math.round(rFtY)); ctx.lineTo(Math.round(rFtX) + 3, Math.round(rFtY)); ctx.stroke();
-    ctx.strokeStyle = colorMain; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(Math.round(lFtX) - 3, Math.round(lFtY)); ctx.lineTo(Math.round(lFtX) + 3, Math.round(lFtY)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(Math.round(rFtX) - 3, Math.round(rFtY)); ctx.lineTo(Math.round(rFtX) + 3, Math.round(rFtY)); ctx.stroke();
+    // ── BAGGY PANTS (colorMain, thigh=6 shin=5) ───────────
+    seg(lHip, lKne, 6, colorMain);
+    seg(lKne, lFt,  5, colorMain);
+    seg(rHip, rKne, 6, colorMain);
+    seg(rKne, rFt,  5, colorMain);
 
-    // ── Knee joints ───────────────────────────────────────
-    jdot(lKneX, lKneY, 2.5, colorAccent);
-    jdot(rKneX, rKneY, 2.5, colorAccent);
-
-    // ── Torso: filled trapezoid (shoulders wider than hips) ─
-    ctx.fillStyle = G1;
+    // Outer-seam accent stripe on thighs
+    ctx.strokeStyle = colorAccent; ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(Math.round(lShoX) - 1, Math.round(lShoY));
-    ctx.lineTo(Math.round(rShoX) + 1, Math.round(rShoY));
-    ctx.lineTo(Math.round(hipX + 5), Math.round(hipY));
-    ctx.lineTo(Math.round(hipX - 5), Math.round(hipY));
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = col;
+    ctx.moveTo(Math.round(lHip.x - 2), Math.round(lHip.y));
+    ctx.lineTo(Math.round(lKne.x - 2), Math.round(lKne.y));
+    ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(Math.round(lShoX), Math.round(lShoY));
-    ctx.lineTo(Math.round(rShoX), Math.round(rShoY));
-    ctx.lineTo(Math.round(hipX + 4), Math.round(hipY));
-    ctx.lineTo(Math.round(hipX - 4), Math.round(hipY));
-    ctx.closePath();
-    ctx.fill();
-    // Chest highlight strip
-    ctx.fillStyle = colorAccent;
-    ctx.fillRect(Math.round(chestX) - 1, Math.round(chestY) + 4, 3, 2);
+    ctx.moveTo(Math.round(rHip.x + 2), Math.round(rHip.y));
+    ctx.lineTo(Math.round(rKne.x + 2), Math.round(rKne.y));
+    ctx.stroke();
 
-    // ── Arms: upper(4px) → forearm(3px) ──────────────────
-    limb(lShoX, lShoY, lEx, lEy, 4);
-    limb(lEx, lEy, lHndX - punchX * 1.4, lHndY + punchY, 3);
-    limb(rShoX, rShoY, rEx, rEy, 4);
-    limb(rEx, rEy, rHndX + punchX * 1.4, rHndY + punchY, 3);
+    // ── SNEAKERS (boxy) ───────────────────────────────────
+    function shoe(p) {
+      const sx = Math.round(p.x), sy = Math.round(p.y);
+      ctx.fillStyle = G0;       ctx.fillRect(sx - 5, sy - 2, 10, 4);  // shoe body
+      ctx.fillStyle = G1;       ctx.fillRect(sx - 5, sy - 2, 10, 2);  // upper
+      ctx.fillStyle = colorAccent; ctx.fillRect(sx - 5, sy + 1, 10, 1); // sole stripe
+    }
+    shoe(lFt);
+    shoe(rFt);
 
-    // ── Elbow joints ──────────────────────────────────────
-    jdot(lEx, lEy, 2, colorAccent);
-    jdot(rEx, rEy, 2, colorAccent);
+    // Knee joints
+    jdot(lKne, 2.5, colorAccent);
+    jdot(rKne, 2.5, colorAccent);
 
-    // ── Head ──────────────────────────────────────────────
-    jdot(headX, headY, HR, col);
-    // Face highlight (upper-left of head)
-    ctx.fillStyle = colorAccent;
-    ctx.beginPath();
-    ctx.arc(Math.round(headX - 2), Math.round(headY - 2), 2, 0, Math.PI * 2);
-    ctx.fill();
+    // ── TORSO / HOODIE ────────────────────────────────────
+    // Determine spine direction to decide trapezoid vs thick segment
+    const spineA = Math.atan2(hip.y - chest.y, hip.x - chest.x);
+    const isUpright = Math.abs(Math.sin(spineA)) > 0.5;  // mostly vertical
+
+    if (isUpright) {
+      // Trapezoid: wider at shoulders, narrower at hips
+      ctx.fillStyle = G1;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(lSho.x) - 1, Math.round(lSho.y) - 1);
+      ctx.lineTo(Math.round(rSho.x) + 1, Math.round(rSho.y) - 1);
+      ctx.lineTo(Math.round(hip.x  + 5), Math.round(hip.y)  + 1);
+      ctx.lineTo(Math.round(hip.x  - 5), Math.round(hip.y)  + 1);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = colorAccent;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(lSho.x), Math.round(lSho.y));
+      ctx.lineTo(Math.round(rSho.x), Math.round(rSho.y));
+      ctx.lineTo(Math.round(hip.x + 4), Math.round(hip.y));
+      ctx.lineTo(Math.round(hip.x - 4), Math.round(hip.y));
+      ctx.closePath(); ctx.fill();
+      // Hoodie kangaroo pocket
+      const pkY = Math.round(chest.y * 0.35 + hip.y * 0.65);
+      ctx.fillStyle = G1; ctx.fillRect(Math.round(hip.x) - 4, pkY, 8, 2);
+    } else {
+      // Horizontal body: draw as thick segment
+      seg(chest, hip, 10, colorAccent);
+    }
+
+    // ── HOODIE SLEEVES (upper=5 forearm=4) ───────────────
+    seg(lSho, lElb, 5, colorAccent);
+    seg(lElb, lHnd, 4, colorAccent);
+    seg(rSho, rElb, 5, colorAccent);
+    seg(rElb, rHnd, 4, colorAccent);
+
+    // Elbow joints
+    jdot(lElb, 2, colorMain);
+    jdot(rElb, 2, colorMain);
+
+    // Hands (fists)
+    jdot(lHnd, 2.5, colorAccent);
+    jdot(rHnd, 2.5, colorAccent);
+
+    // ── HEAD ──────────────────────────────────────────────
     // Neck
-    ctx.strokeStyle = G1;  ctx.lineWidth = 3;
+    seg(chest, { x: head.x, y: head.y + HR }, 2, colorAccent);
+    // Head
+    jdot(head, HR, colorAccent);
+    // Face highlight
+    ctx.fillStyle = colorAccent;
     ctx.beginPath();
-    ctx.moveTo(Math.round(chestX), Math.round(chestY));
-    ctx.lineTo(Math.round(headX), Math.round(headY + HR));
-    ctx.stroke();
-    ctx.strokeStyle = col;  ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(Math.round(chestX), Math.round(chestY));
-    ctx.lineTo(Math.round(headX), Math.round(headY + HR));
-    ctx.stroke();
+    ctx.arc(Math.round(head.x - 2), Math.round(head.y - 2), 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── B-BOY CAP ─────────────────────────────────────────
+    const capTop = Math.round(head.y) - HR - 4;
+    const capCX  = Math.round(head.x);
+    // Crown
+    ctx.fillStyle = G1;        ctx.fillRect(capCX - HR - 1, capTop - 1, HR * 2 + 2, 5);
+    ctx.fillStyle = colorMain; ctx.fillRect(capCX - HR,     capTop,     HR * 2,     4);
+    // Brim — flip direction for freeze (character faces left)
+    const brimLeft = (moveId === 2);
+    const bX = brimLeft ? capCX - HR - 6 : capCX + HR - 1;
+    ctx.fillStyle = G1;           ctx.fillRect(bX, capTop + 2, 7, 3);
+    ctx.fillStyle = colorAccent;  ctx.fillRect(bX + 1, capTop + 2, 5, 2);
+    // Crown button
+    ctx.fillStyle = colorAccent;  ctx.fillRect(capCX - 1, capTop - 1, 2, 2);
   }
 
 }
