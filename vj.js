@@ -1192,75 +1192,95 @@ class VJDisplay {
     this._drawText(('00' + beat).slice(-3), 2, 2, G2, 1);
   }
 
-  // Draw a single stick figure at (cx, groundY) with forward kinematics
+  // Draw a single stick figure at (cx, groundY) — MJ-style pose-based animation
   _drawDancer(cx, groundY, ph, kick, snare, amp, colorMain, colorAccent) {
     const ctx = this.ctx;
 
-    // Body metrics (pixels)
-    const TORSO  = 20;
-    const UPPER  = 11;   // upper arm / thigh
-    const LOWER  = 10;   // forearm / shin
-    const HEAD_R =  5;
+    // Bone lengths
+    const TORSO = 18, UA = 9, LA = 8, UL = 11, LL = 10, HR = 5;
 
-    // ── Motion parameters ─────────────────────────────────
-    const bounce  = Math.sin(ph * 2) * (5 + kick * 2.0) * amp;   // vertical bob
-    const sway    = Math.sin(ph)     * (3 + kick * 1.5) * amp;    // lateral sway
-    const fsnap   = snare > 0 ? (snare / 6) * 6 : 0;              // forward lean snap
+    // ── Snappy hip pop (tanh = soft square wave) ──────────
+    const snapRaw = Math.tanh(Math.sin(ph * 2) * 4);   // ±1, snappy
+    const snap    = snapRaw * (5 + kick * 2.5) * amp;
 
-    // ── Key joint positions ───────────────────────────────
-    const hipY    = groundY - 4;                    // hip stays near floor
-    const hipX    = cx + sway * 0.6;
-    const chestX  = hipX + sway * 0.4 + fsnap * 0.5;
-    const chestY  = hipY - TORSO + bounce;
-    const headX   = chestX + sway * 0.2;
-    const headY   = chestY - HEAD_R - 2;
+    // Vertical groove: quick dip on beat (V-shape, not sine)
+    const bob = -Math.abs(Math.sin(ph * 2)) * (3 + kick * 2.0) * amp;
 
-    // ── Arm angles ────────────────────────────────────────
-    const armSwing   = Math.sin(ph)   * (Math.PI / 3) * (0.5 + kick * 0.06) * amp;
-    const armPunch   = snare > 0 ? (snare / 6) * 0.65 : 0;   // outward punch
-    const lArmAngle1 = -Math.PI * 0.35 + armSwing + armPunch;
-    const rArmAngle1 = -Math.PI * 0.35 - armSwing + armPunch;
-    const lArmAngle2 =  Math.PI * 0.5  - armSwing * 0.6;
-    const rArmAngle2 =  Math.PI * 0.5  + armSwing * 0.6;
+    // Forward lean on snare punch
+    const lean = snare > 0 ? (snare / 6) * 6 : 0;
 
-    // ── Leg angles ────────────────────────────────────────
-    const legStep    = Math.sin(ph * 2) * (Math.PI / 4) * (0.6 + kick * 0.06) * amp;
-    const lLegAngle1 = Math.PI * 0.1 + legStep;
-    const rLegAngle1 = Math.PI * 0.1 - legStep;
-    const lLegAngle2 = Math.PI * 0.6 + legStep * 0.5;
-    const rLegAngle2 = Math.PI * 0.6 - legStep * 0.5;
+    // ── Skeleton joints ───────────────────────────────────
+    const hipX   = cx + snap * 0.8;
+    const hipY   = groundY - 4;
+    // Chest isolates opposite to hip (body isolation)
+    const chestX = cx - snap * 0.2 + lean * 0.35;
+    const chestY = hipY - TORSO + bob;
+    // Head tilts slightly away from hip pop
+    const headX  = chestX - snap * 0.5;
+    const headY  = chestY - HR - 2;
 
-    // ── Helper: endpoint from joint ───────────────────────
-    function jnt(x, y, ang, len) {
-      return [x + Math.sin(ang) * len, y + Math.cos(ang) * len];
-    }
+    const lShoX = chestX - 5, lShoY = chestY + 1;
+    const rShoX = chestX + 5, rShoY = chestY + 1;
 
-    // Compute joints
-    const [lShoX, lShoY]  = [chestX - 4, chestY];
-    const [rShoX, rShoY]  = [chestX + 4, chestY];
-    const [lElbX, lElbY]  = jnt(lShoX, lShoY, lArmAngle1, UPPER);
-    const [rElbX, rElbY]  = jnt(rShoX, rShoY, rArmAngle1, UPPER);
-    const [lHndX, lHndY]  = jnt(lElbX, lElbY, lArmAngle1 + lArmAngle2 - Math.PI * 0.5, LOWER);
-    const [rHndX, rHndY]  = jnt(rElbX, rElbY, rArmAngle1 + rArmAngle2 - Math.PI * 0.5, LOWER);
-    const [lKneX, lKneY]  = jnt(hipX - 3, hipY, lLegAngle1, UPPER);
-    const [rKneX, rKneY]  = jnt(hipX + 3, hipY, rLegAngle1, UPPER);
-    const [lFtX,  lFtY]   = jnt(lKneX, lKneY, lLegAngle1 + lLegAngle2 - Math.PI * 0.4, LOWER);
-    const [rFtX,  rFtY]   = jnt(rKneX, rKneY, rLegAngle1 + rLegAngle2 - Math.PI * 0.4, LOWER);
+    // ── Arms: pose-based interpolation ───────────────────
+    // t=1: hip right → left arm UP-BENT (hat grab), right arm OUT-LOW
+    // t=0: hip left  → right arm UP-BENT, left arm OUT-LOW
+    const t = (snapRaw + 1) * 0.5;
 
-    // ── Shadow on floor ───────────────────────────────────
+    // Left arm poses
+    const lElbX_up = lShoX - 4,  lElbY_up = lShoY - 8;
+    const lHndX_up = lElbX_up - 2, lHndY_up = lElbY_up - LA + 1;
+    const lElbX_lo = lShoX - UA, lElbY_lo = lShoY + 4;
+    const lHndX_lo = lElbX_lo - 3, lHndY_lo = lElbY_lo + 6;
+
+    const lElbX = lElbX_up * t + lElbX_lo * (1 - t);
+    const lElbY = lElbY_up * t + lElbY_lo * (1 - t);
+    const lHndX = lHndX_up * t + lHndX_lo * (1 - t);
+    const lHndY = lHndY_up * t + lHndY_lo * (1 - t);
+
+    // Right arm poses (mirror: UP when rt high)
+    const rt = 1 - t;
+    const rElbX_up = rShoX + 4,  rElbY_up = rShoY - 8;
+    const rHndX_up = rElbX_up + 2, rHndY_up = rElbY_up - LA + 1;
+    const rElbX_lo = rShoX + UA, rElbY_lo = rShoY + 4;
+    const rHndX_lo = rElbX_lo + 3, rHndY_lo = rElbY_lo + 6;
+
+    const rElbX = rElbX_up * rt + rElbX_lo * (1 - rt);
+    const rElbY = rElbY_up * rt + rElbY_lo * (1 - rt);
+    const rHndX = rHndX_up * rt + rHndX_lo * (1 - rt);
+    const rHndY = rHndY_up * rt + rHndY_lo * (1 - rt);
+
+    // Snare: arms fly wide
+    const punchX = snare > 0 ? (snare / 6) * 5 : 0;
+    const punchY = snare > 0 ? -(snare / 6) * 3 : 0;
+
+    // ── Legs: weight-shift stance ─────────────────────────
+    // snapRaw > 0 → weight on right, left leg free/raised
+    // snapRaw < 0 → weight on left, right leg free/raised
+    const lHipX = hipX - 3, rHipX = hipX + 3;
+
+    const lKneX = lHipX + (t > 0.55 ? -3 : -1);
+    const lKneY = hipY + UL * (t > 0.55 ? 0.65 : 0.95);
+    const lFtX  = lHipX + (t > 0.55 ? 5 : -1);
+    const lFtY  = t > 0.55 ? lKneY + LL * 0.55 : groundY - 2;
+
+    const rKneX = rHipX + (rt > 0.55 ? 3 : 1);
+    const rKneY = hipY + UL * (rt > 0.55 ? 0.65 : 0.95);
+    const rFtX  = rHipX + (rt > 0.55 ? -5 : 1);
+    const rFtY  = rt > 0.55 ? rKneY + LL * 0.55 : groundY - 2;
+
+    // ── Shadow ────────────────────────────────────────────
     ctx.save();
     ctx.globalAlpha = 0.25 + kick * 0.04;
     ctx.fillStyle = colorMain;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY, 12, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY, 11, 3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // ── Draw limbs ────────────────────────────────────────
+    // ── Draw ──────────────────────────────────────────────
     ctx.lineWidth = 2;
     ctx.lineCap   = 'round';
-
-    // Choose accent color on snare hit
     const col = snare > 3 ? colorAccent : colorMain;
 
     function seg(x1, y1, x2, y2, c) {
@@ -1271,26 +1291,26 @@ class VJDisplay {
       ctx.stroke();
     }
 
-    // Legs (behind body)
-    seg(hipX - 3, hipY, lKneX, lKneY);
+    // Legs
+    seg(lHipX, hipY, lKneX, lKneY);
     seg(lKneX, lKneY, lFtX, lFtY);
-    seg(hipX + 3, hipY, rKneX, rKneY);
+    seg(rHipX, hipY, rKneX, rKneY);
     seg(rKneX, rKneY, rFtX, rFtY);
 
-    // Torso
+    // Torso (accent color — the groove spine)
     seg(hipX, hipY, chestX, chestY, colorAccent);
 
-    // Arms
-    seg(lShoX, lShoY, lElbX, lElbY);
-    seg(lElbX, lElbY, lHndX, lHndY);
-    seg(rShoX, rShoY, rElbX, rElbY);
-    seg(rElbX, rElbY, rHndX, rHndY);
+    // Arms (with snare punch offset)
+    seg(lShoX, lShoY, lElbX - punchX, lElbY + punchY);
+    seg(lElbX - punchX, lElbY + punchY, lHndX - punchX * 1.4, lHndY + punchY);
+    seg(rShoX, rShoY, rElbX + punchX, rElbY + punchY);
+    seg(rElbX + punchX, rElbY + punchY, rHndX + punchX * 1.4, rHndY + punchY);
 
     // Head
     ctx.strokeStyle = snare > 2 ? colorAccent : colorMain;
     ctx.lineWidth   = 2;
     ctx.beginPath();
-    ctx.arc(Math.round(headX), Math.round(headY), HEAD_R, 0, Math.PI * 2);
+    ctx.arc(Math.round(headX), Math.round(headY), HR, 0, Math.PI * 2);
     ctx.stroke();
   }
 
