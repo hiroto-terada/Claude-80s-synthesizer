@@ -1250,19 +1250,18 @@ class VJDisplay {
     this._drawText(('00' + beat).slice(-3), 2, 2, G2, 1);
   }
 
-  // Breakdancing 3D-print lattice figure (cubic head, ring joints, boxy limbs)
-  // 3 moves cycling every 8 beats: toprock → windmill → freeze
+  // Breakdancing human with clothes (cap + hoodie + baggy pants + sneakers)
+  // move 0: toprock, move 1: windmill, move 2: freeze — cycling every 8 beats
   _drawDancer(cx, groundY, ph, kick, snare, amp, colorMain, colorAccent, beat, frame) {
     const ctx = this.ctx;
     const G0 = '#0f380f', G1 = '#306230';
 
-    const HS    = 7;   // head half-size (square: 14×14px)
-    const TORSO = 14, UL = 11, LL = 10;
+    const TORSO = 17, UL = 13, LL = 11, HR = 6;
     const moveId = Math.floor(beat / 8) % 3;   // 0=toprock 1=windmill 2=freeze
 
     let head, chest, hip, lSho, rSho, lHip, rHip, lElb, rElb, lHnd, rHnd, lKne, rKne, lFt, rFt;
 
-    // ── MOVE 0: TOPROCK ───────────────────────────────────
+    // ── MOVE 0: TOPROCK (b-boy cross-step) ───────────────
     if (moveId === 0) {
       const snapRaw = Math.tanh(Math.sin(ph * 2) * 4);
       const snap    = snapRaw * (5 + kick * 2.0) * amp;
@@ -1271,47 +1270,52 @@ class VJDisplay {
 
       hip   = { x: cx + snap * 0.8,      y: groundY - 4 };
       chest = { x: cx - snap * 0.2,      y: hip.y - TORSO + bob };
-      head  = { x: chest.x - snap * 0.4, y: chest.y - HS - 3 };
-      lSho  = { x: chest.x - 7,  y: chest.y + 1 };
-      rSho  = { x: chest.x + 7,  y: chest.y + 1 };
-      lHip  = { x: hip.x - 5,    y: hip.y };
-      rHip  = { x: hip.x + 5,    y: hip.y };
+      head  = { x: chest.x - snap * 0.5, y: chest.y - HR - 3 };
+      lSho  = { x: chest.x - 6,  y: chest.y + 1 };
+      rSho  = { x: chest.x + 6,  y: chest.y + 1 };
+      lHip  = { x: hip.x - 3,    y: hip.y };
+      rHip  = { x: hip.x + 3,    y: hip.y };
 
-      lElb  = { x: lSho.x - 4,   y: lSho.y - 8 + armPh * 2 };
-      lHnd  = { x: lElb.x - 2,   y: lElb.y - 8 };
+      // Arms: one fist up, one swinging low
+      lElb  = { x: lSho.x - 3,   y: lSho.y - 7 + armPh * 2 };
+      lHnd  = { x: lElb.x - 2,   y: lElb.y - 7 };
       rElb  = { x: rSho.x + 7,   y: rSho.y + 3 - armPh * 3 };
       rHnd  = { x: rElb.x + 3,   y: rElb.y + 5 };
 
+      // Cross-step legs
       const t = (snapRaw + 1) * 0.5, rt = 1 - t;
-      lKne  = { x: hip.x - 5 + (t  > 0.55 ? -3 : -1), y: hip.y + UL * (t  > 0.55 ? 0.65 : 0.95) };
-      lFt   = { x: hip.x - 5 + (t  > 0.55 ?  5 : -1), y: t  > 0.55 ? lKne.y + LL * 0.55 : groundY - 2 };
-      rKne  = { x: hip.x + 5 + (rt > 0.55 ?  3 :  1), y: hip.y + UL * (rt > 0.55 ? 0.65 : 0.95) };
-      rFt   = { x: hip.x + 5 + (rt > 0.55 ? -5 :  1), y: rt > 0.55 ? rKne.y + LL * 0.55 : groundY - 2 };
+      lKne  = { x: hip.x - 3 + (t  > 0.55 ? -3 : -1), y: hip.y + UL * (t  > 0.55 ? 0.65 : 0.95) };
+      lFt   = { x: hip.x - 3 + (t  > 0.55 ?  5 : -1), y: t  > 0.55 ? lKne.y + LL * 0.55 : groundY - 2 };
+      rKne  = { x: hip.x + 3 + (rt > 0.55 ?  3 :  1), y: hip.y + UL * (rt > 0.55 ? 0.65 : 0.95) };
+      rFt   = { x: hip.x + 3 + (rt > 0.55 ? -5 :  1), y: rt > 0.55 ? rKne.y + LL * 0.55 : groundY - 2 };
 
-    // ── MOVE 1: WINDMILL ──────────────────────────────────
+    // ── MOVE 1: WINDMILL (floor spin, legs circle) ────────
     } else if (moveId === 1) {
       const spinAng = ph * 3;
       const bodyY   = groundY - 11;
 
-      head  = { x: cx - 16, y: groundY - HS };
+      head  = { x: cx - 16, y: groundY - HR };
       chest = { x: cx - 6,  y: bodyY - 1 };
       hip   = { x: cx + 5,  y: bodyY };
       lSho  = { x: chest.x - 5, y: chest.y };
       rSho  = { x: chest.x + 5, y: chest.y };
-      lHip  = { x: hip.x - 5,   y: hip.y };
-      rHip  = { x: hip.x + 5,   y: hip.y };
+      lHip  = { x: hip.x - 3,   y: hip.y };
+      rHip  = { x: hip.x + 3,   y: hip.y };
+
+      // Arms bracing on floor
       lElb  = { x: cx - 13, y: bodyY + 5 };
       lHnd  = { x: cx - 17, y: groundY - 2 };
       rElb  = { x: cx - 1,  y: bodyY + 6 };
       rHnd  = { x: cx + 1,  y: groundY - 2 };
 
+      // Legs spinning in full 360°
       const hx = hip.x, hy = hip.y;
-      lKne  = { x: hx + Math.cos(spinAng)                * UL,            y: hy + Math.sin(spinAng)                * UL };
-      lFt   = { x: hx + Math.cos(spinAng + 0.5)          * (UL + LL*0.7), y: hy + Math.sin(spinAng + 0.5)          * (UL + LL*0.7) };
-      rKne  = { x: hx + Math.cos(spinAng + Math.PI)      * UL,            y: hy + Math.sin(spinAng + Math.PI)      * UL };
-      rFt   = { x: hx + Math.cos(spinAng + Math.PI+0.5)  * (UL + LL*0.7), y: hy + Math.sin(spinAng + Math.PI+0.5)  * (UL + LL*0.7) };
+      lKne  = { x: hx + Math.cos(spinAng)           * UL,            y: hy + Math.sin(spinAng)           * UL };
+      lFt   = { x: hx + Math.cos(spinAng + 0.5)     * (UL + LL*0.7), y: hy + Math.sin(spinAng + 0.5)     * (UL + LL*0.7) };
+      rKne  = { x: hx + Math.cos(spinAng + Math.PI) * UL,            y: hy + Math.sin(spinAng + Math.PI) * UL };
+      rFt   = { x: hx + Math.cos(spinAng + Math.PI + 0.5) * (UL + LL*0.7), y: hy + Math.sin(spinAng + Math.PI + 0.5) * (UL + LL*0.7) };
 
-    // ── MOVE 2: FREEZE ────────────────────────────────────
+    // ── MOVE 2: FREEZE (L-freeze, horizontal body) ────────
     } else {
       const wobble = Math.sin(ph * 4) * 0.8 * amp;
       const bodyY  = groundY - 16 + wobble;
@@ -1321,31 +1325,36 @@ class VJDisplay {
       hip   = { x: cx + 5,  y: bodyY + 1 };
       lSho  = { x: chest.x - 4, y: chest.y };
       rSho  = { x: chest.x + 4, y: chest.y };
-      lHip  = { x: hip.x - 5,   y: hip.y };
-      rHip  = { x: hip.x + 5,   y: hip.y };
+      lHip  = { x: hip.x - 3,   y: hip.y };
+      rHip  = { x: hip.x + 3,   y: hip.y };
+
+      // Left arm: support (straight to floor)
       lElb  = { x: cx - 13, y: bodyY + 9 };
       lHnd  = { x: cx - 15, y: groundY - 3 };
+      // Right arm: stylish upward extension
       rElb  = { x: chest.x + 5,  y: bodyY - 8 };
       rHnd  = { x: chest.x + 11, y: bodyY - 15 };
+
+      // Legs: L-shape
       lKne  = { x: hip.x + 7,  y: bodyY - 8 };
       lFt   = { x: hip.x + 15, y: bodyY - 4 };
       rKne  = { x: hip.x + 7,  y: bodyY + 9 };
       rFt   = { x: hip.x + 14, y: bodyY + 6 };
     }
 
-    // Snare punch offset
+    // Snare punch
     const px = snare > 0 ? (snare / 6) * 4 : 0;
     const py = snare > 0 ? -(snare / 6) * 2 : 0;
     lHnd.x -= px; lHnd.y += py;
     rHnd.x += px; rHnd.y += py;
 
     const col = snare > 3 ? colorAccent : colorMain;
-    ctx.lineCap  = 'square';   // KEY: flat-ended → boxy rectangular limbs
-    ctx.lineJoin = 'miter';
 
-    // ── Drawing helpers ───────────────────────────────────
+    ctx.lineCap  = 'round';
+    ctx.lineJoin = 'round';
 
-    // Rectangular limb segment (square lineCap = box shape)
+    // ── Helpers ───────────────────────────────────────────
+    // Capsule segment: G1 outline then fc fill
     function seg(p1, p2, w, fc) {
       ctx.strokeStyle = G1; ctx.lineWidth = w + 2;
       ctx.beginPath();
@@ -1359,96 +1368,125 @@ class VJDisplay {
       ctx.stroke();
     }
 
-    // Lattice dot hints along a segment (2 G1 dots at 30% and 65%)
-    function latDots(p1, p2) {
+    // Filled circle: G1 outline then fc fill
+    function jdot(p, r, fc) {
       ctx.fillStyle = G1;
-      for (const s of [0.3, 0.65]) {
-        ctx.fillRect(
-          Math.round(p1.x + (p2.x - p1.x) * s) - 1,
-          Math.round(p1.y + (p2.y - p1.y) * s) - 1, 2, 2
-        );
-      }
-    }
-
-    // Ring joint: annular circle (hollow) — like the ball joints in the figure
-    function ring(p, ro, fc) {
-      ctx.strokeStyle = G1; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(Math.round(p.x), Math.round(p.y), ro, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(Math.round(p.x), Math.round(p.y), r + 1, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = fc;
-      ctx.beginPath(); ctx.arc(Math.round(p.x), Math.round(p.y), ro - 2, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = G1;
-      ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 2, 2);
+      ctx.beginPath();
+      ctx.arc(Math.round(p.x), Math.round(p.y), r, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // Cubic head with lattice grid lines and eye sockets
-    function cubeHead(p) {
-      const hx = Math.round(p.x) - HS, hy = Math.round(p.y) - HS;
-      // Outline
-      ctx.fillStyle = G1; ctx.fillRect(hx - 1, hy - 1, HS*2 + 2, HS*2 + 2);
-      // Face fill
-      ctx.fillStyle = col; ctx.fillRect(hx, hy, HS*2, HS*2);
-      // Lattice grid lines (2 vertical, 2 horizontal)
-      ctx.strokeStyle = G1; ctx.lineWidth = 1;
-      for (const ox of [5, 9]) {
-        ctx.beginPath(); ctx.moveTo(hx + ox, hy); ctx.lineTo(hx + ox, hy + HS*2); ctx.stroke();
-      }
-      for (const oy of [5, 9]) {
-        ctx.beginPath(); ctx.moveTo(hx, hy + oy); ctx.lineTo(hx + HS*2, hy + oy); ctx.stroke();
-      }
-      // Eye sockets (dark recesses)
-      ctx.fillStyle = G0; ctx.fillRect(hx + 2, hy + 2, 3, 3);
-      ctx.fillStyle = G0; ctx.fillRect(hx + 9, hy + 2, 3, 3);
-    }
-
-    // Small square fist / foot block
-    function squareBlock(p, fc) {
-      ctx.fillStyle = G1; ctx.fillRect(Math.round(p.x) - 3, Math.round(p.y) - 3, 7, 7);
-      ctx.fillStyle = fc; ctx.fillRect(Math.round(p.x) - 2, Math.round(p.y) - 2, 5, 5);
-      ctx.fillStyle = G1; ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 2, 2);
-    }
-
-    // ── Shadow ────────────────────────────────────────────
+    // ── Shadow ellipse ────────────────────────────────────
     ctx.save();
     ctx.globalAlpha = 0.25 + kick * 0.04;
     ctx.fillStyle   = colorMain;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY, 14, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY, 13, 3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // ── LEGS (thigh=8, shin=7) + knee ring joints ─────────
-    seg(lHip, lKne, 8, colorMain); latDots(lHip, lKne);
-    seg(lKne, lFt,  7, colorMain); latDots(lKne, lFt);
-    seg(rHip, rKne, 8, colorMain); latDots(rHip, rKne);
-    seg(rKne, rFt,  7, colorMain); latDots(rKne, rFt);
-    squareBlock(lFt, colorMain);
-    squareBlock(rFt, colorMain);
-    ring(lKne, 4, colorAccent);
-    ring(rKne, 4, colorAccent);
+    // ── BAGGY PANTS (colorMain, thigh=6 shin=5) ───────────
+    seg(lHip, lKne, 6, colorMain);
+    seg(lKne, lFt,  5, colorMain);
+    seg(rHip, rKne, 6, colorMain);
+    seg(rKne, rFt,  5, colorMain);
 
-    // ── TORSO (barrel chest, 13px wide) ───────────────────
-    seg(chest, hip, 13, col);
-    ring(hip, 5, colorAccent);    // pelvis ring
+    // Outer-seam accent stripe on thighs
+    ctx.strokeStyle = colorAccent; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.round(lHip.x - 2), Math.round(lHip.y));
+    ctx.lineTo(Math.round(lKne.x - 2), Math.round(lKne.y));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(Math.round(rHip.x + 2), Math.round(rHip.y));
+    ctx.lineTo(Math.round(rKne.x + 2), Math.round(rKne.y));
+    ctx.stroke();
 
-    // ── ARMS (upper=7, forearm=6) + ring joints ───────────
-    seg(lSho, lElb, 7, col); latDots(lSho, lElb);
-    seg(lElb, lHnd, 6, col); latDots(lElb, lHnd);
-    seg(rSho, rElb, 7, col); latDots(rSho, rElb);
-    seg(rElb, rHnd, 6, col); latDots(rElb, rHnd);
-    squareBlock(lHnd, col);
-    squareBlock(rHnd, col);
-    ring(lSho, 4, colorAccent);
-    ring(rSho, 4, colorAccent);
-    ring(lElb, 3, colorAccent);
-    ring(rElb, 3, colorAccent);
+    // ── SNEAKERS (boxy) ───────────────────────────────────
+    function shoe(p) {
+      const sx = Math.round(p.x), sy = Math.round(p.y);
+      ctx.fillStyle = G0;       ctx.fillRect(sx - 5, sy - 2, 10, 4);  // shoe body
+      ctx.fillStyle = G1;       ctx.fillRect(sx - 5, sy - 2, 10, 2);  // upper
+      ctx.fillStyle = colorAccent; ctx.fillRect(sx - 5, sy + 1, 10, 1); // sole stripe
+    }
+    shoe(lFt);
+    shoe(rFt);
 
-    // ── HEAD + NECK ───────────────────────────────────────
-    // Neck: short segment to head base
-    ctx.lineCap = 'round';
-    seg(chest, { x: head.x, y: head.y + HS }, 3, col);
-    ctx.lineCap = 'square';
-    ring({ x: head.x, y: head.y + HS }, 3, colorAccent);  // neck ring joint
-    cubeHead(head);
+    // Knee joints
+    jdot(lKne, 2.5, colorAccent);
+    jdot(rKne, 2.5, colorAccent);
+
+    // ── TORSO / HOODIE ────────────────────────────────────
+    // Determine spine direction to decide trapezoid vs thick segment
+    const spineA = Math.atan2(hip.y - chest.y, hip.x - chest.x);
+    const isUpright = Math.abs(Math.sin(spineA)) > 0.5;  // mostly vertical
+
+    if (isUpright) {
+      // Trapezoid: wider at shoulders, narrower at hips
+      ctx.fillStyle = G1;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(lSho.x) - 1, Math.round(lSho.y) - 1);
+      ctx.lineTo(Math.round(rSho.x) + 1, Math.round(rSho.y) - 1);
+      ctx.lineTo(Math.round(hip.x  + 5), Math.round(hip.y)  + 1);
+      ctx.lineTo(Math.round(hip.x  - 5), Math.round(hip.y)  + 1);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = colorAccent;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(lSho.x), Math.round(lSho.y));
+      ctx.lineTo(Math.round(rSho.x), Math.round(rSho.y));
+      ctx.lineTo(Math.round(hip.x + 4), Math.round(hip.y));
+      ctx.lineTo(Math.round(hip.x - 4), Math.round(hip.y));
+      ctx.closePath(); ctx.fill();
+      // Hoodie kangaroo pocket
+      const pkY = Math.round(chest.y * 0.35 + hip.y * 0.65);
+      ctx.fillStyle = G1; ctx.fillRect(Math.round(hip.x) - 4, pkY, 8, 2);
+    } else {
+      // Horizontal body: draw as thick segment
+      seg(chest, hip, 10, colorAccent);
+    }
+
+    // ── HOODIE SLEEVES (upper=5 forearm=4) ───────────────
+    seg(lSho, lElb, 5, colorAccent);
+    seg(lElb, lHnd, 4, colorAccent);
+    seg(rSho, rElb, 5, colorAccent);
+    seg(rElb, rHnd, 4, colorAccent);
+
+    // Elbow joints
+    jdot(lElb, 2, colorMain);
+    jdot(rElb, 2, colorMain);
+
+    // Hands (fists)
+    jdot(lHnd, 2.5, colorAccent);
+    jdot(rHnd, 2.5, colorAccent);
+
+    // ── HEAD ──────────────────────────────────────────────
+    // Neck
+    seg(chest, { x: head.x, y: head.y + HR }, 2, colorAccent);
+    // Head
+    jdot(head, HR, colorAccent);
+    // Face highlight
+    ctx.fillStyle = colorAccent;
+    ctx.beginPath();
+    ctx.arc(Math.round(head.x - 2), Math.round(head.y - 2), 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── B-BOY CAP ─────────────────────────────────────────
+    const capTop = Math.round(head.y) - HR - 4;
+    const capCX  = Math.round(head.x);
+    // Crown
+    ctx.fillStyle = G1;        ctx.fillRect(capCX - HR - 1, capTop - 1, HR * 2 + 2, 5);
+    ctx.fillStyle = colorMain; ctx.fillRect(capCX - HR,     capTop,     HR * 2,     4);
+    // Brim — flip direction for freeze (character faces left)
+    const brimLeft = (moveId === 2);
+    const bX = brimLeft ? capCX - HR - 6 : capCX + HR - 1;
+    ctx.fillStyle = G1;           ctx.fillRect(bX, capTop + 2, 7, 3);
+    ctx.fillStyle = colorAccent;  ctx.fillRect(bX + 1, capTop + 2, 5, 2);
+    // Crown button
+    ctx.fillStyle = colorAccent;  ctx.fillRect(capCX - 1, capTop - 1, 2, 2);
   }
 
 }
