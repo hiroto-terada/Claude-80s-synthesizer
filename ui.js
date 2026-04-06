@@ -422,9 +422,10 @@ function setLed(id, on) {
     } else if (e.key === 'Escape' || e.key === 'ArrowLeft') {
       if (drawer.classList.contains('open')) closeDrawer();
     }
-    // Z = fullscreen toggle
+    // Z = VJ canvas fullscreen toggle
     if (e.key === 'z' || e.key === 'Z') {
-      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      const vjCanvas = document.getElementById('vj-canvas');
+      if (!document.fullscreenElement) vjCanvas?.requestFullscreen?.();
       else document.exitFullscreen?.();
     }
   });

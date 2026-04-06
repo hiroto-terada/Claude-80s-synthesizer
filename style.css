@@ -1221,6 +1221,16 @@ header {
   max-width: 100%;
   display: block;
 }
+#vj-canvas:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  background: #000;
+  border: none;
+  border-radius: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 
 .vj-controls {
   display: flex;
