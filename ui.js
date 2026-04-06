@@ -431,12 +431,31 @@ function setLed(id, on) {
   backdrop.addEventListener('click', closeDrawer);
 
   // ── PC: キーボードショートカット ──
-  // \ でトグル、Escape で閉じる
+  // \ でトグル、Escape で閉じる。フルスクリーン中は矢印で VJ スタイル切替
+  const VJ_STYLES = ['digital', 'soft', 'art', 'matrix', 'scope', 'dance'];
+  function cycleVjStyle(dir) {
+    if (!vjDisplay) return;
+    const cur = VJ_STYLES.indexOf(vjDisplay.style);
+    const next = (cur + dir + VJ_STYLES.length) % VJ_STYLES.length;
+    const style = VJ_STYLES[next];
+    vjDisplay.setStyle(style);
+    if (typeof vjRelay !== 'undefined') vjRelay.setStyle(style);
+    document.querySelectorAll('.vj-style-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.style === style);
+    });
+  }
+
   document.addEventListener('keydown', e => {
-    if (e.key === '\\' || e.key === 'ArrowRight') {
-      if (!drawer.classList.contains('open')) openDrawer();
-    } else if (e.key === 'Escape' || e.key === 'ArrowLeft') {
-      if (drawer.classList.contains('open')) closeDrawer();
+    if (document.fullscreenElement) {
+      // フルスクリーン中: 矢印キーで VJ スタイル切替
+      if (e.key === 'ArrowRight') { e.preventDefault(); cycleVjStyle(+1); return; }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); cycleVjStyle(-1); return; }
+    } else {
+      if (e.key === '\\' || e.key === 'ArrowRight') {
+        if (!drawer.classList.contains('open')) openDrawer();
+      } else if (e.key === 'Escape' || e.key === 'ArrowLeft') {
+        if (drawer.classList.contains('open')) closeDrawer();
+      }
     }
     // Z = VJ fullscreen toggle
     if (e.key === 'z' || e.key === 'Z') toggleVjFullscreen();
