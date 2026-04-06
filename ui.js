@@ -422,9 +422,8 @@ function setLed(id, on) {
     } else if (e.key === 'Escape' || e.key === 'ArrowLeft') {
       if (drawer.classList.contains('open')) closeDrawer();
     }
-    // F11 = fullscreen toggle
-    if (e.key === 'F11') {
-      e.preventDefault();
+    // Z = fullscreen toggle
+    if (e.key === 'z' || e.key === 'Z') {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
       else document.exitFullscreen?.();
     }
