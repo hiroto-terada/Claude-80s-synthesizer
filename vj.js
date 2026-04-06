@@ -1518,6 +1518,11 @@ function initVJ() {
       if (typeof vjRelay !== 'undefined') vjRelay.setStyle(btn.dataset.style);
     });
   });
+
+  // Double-click canvas → fullscreen toggle
+  canvas.addEventListener('dblclick', () => {
+    if (typeof toggleVjFullscreen === 'function') toggleVjFullscreen();
+  });
 }
 
 // ── VJ Relay ────────────────────────────────────────────────

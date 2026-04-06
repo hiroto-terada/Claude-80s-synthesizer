@@ -2,6 +2,22 @@
  * FM-80 Synthesizer — UI Controller
  */
 
+// ── VJ フルスクリーントグル ──────────────────────────────────
+function toggleVjFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.();
+    return;
+  }
+  // VJ セクションが閉じていれば開く
+  const section = document.getElementById('vj-section');
+  if (section && !section.classList.contains('open')) {
+    section.classList.add('open');
+    document.getElementById('vj-toggle-btn').textContent = 'VJ ▲';
+  }
+  const wrap = document.getElementById('vj-fs-wrap');
+  (wrap?.requestFullscreen ?? wrap?.webkitRequestFullscreen ?? (() => {})).call(wrap);
+}
+
 // ── ピンチズーム無効化（iOS Safari 対策・キャプチャフェーズ）──
 // capture: true により stopPropagation で止められた要素でも確実にブロック
 // touchstart でも 2 本指を止める（iOS は touchstart 時点でズームを判断するため必須）
@@ -422,12 +438,8 @@ function setLed(id, on) {
     } else if (e.key === 'Escape' || e.key === 'ArrowLeft') {
       if (drawer.classList.contains('open')) closeDrawer();
     }
-    // Z = VJ canvas fullscreen toggle
-    if (e.key === 'z' || e.key === 'Z') {
-      const vjCanvas = document.getElementById('vj-canvas');
-      if (!document.fullscreenElement) vjCanvas?.requestFullscreen?.();
-      else document.exitFullscreen?.();
-    }
+    // Z = VJ fullscreen toggle
+    if (e.key === 'z' || e.key === 'Z') toggleVjFullscreen();
   });
 
   // ── PC: ヘッダーのトグルボタン ──
