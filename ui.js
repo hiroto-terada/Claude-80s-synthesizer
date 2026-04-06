@@ -422,6 +422,11 @@ function setLed(id, on) {
     } else if (e.key === 'Escape' || e.key === 'ArrowLeft') {
       if (drawer.classList.contains('open')) closeDrawer();
     }
+    // F = fullscreen toggle
+    if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
   });
 
   // ── PC: ヘッダーのトグルボタン ──
